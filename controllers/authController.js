@@ -190,8 +190,8 @@ const UserRegister = async (req, res) => {
 
 const brandRegistration = async (req, res) => {
   try {
-    // const userId = req.user.id;
-    const userId=85;
+    const userId = req.user.id;
+   
     const { brand_name, region, domain, keywords, localArea, cities, country, country_code } = req.body;
 
     if (!brand_name) {
@@ -278,33 +278,8 @@ const brandRegistration = async (req, res) => {
     );
     */
 
-    const competitors = await generateCompetitors({
-      brand_name,
-      keywords,
-      cities,
-      region
-    });
 
-    console.log("🤖 AI Competitor Generation Completed");
 
-    if (!competitors.length) {
-      return res.status(500).json({
-        success: false,
-        message: "No competitors generated from AI models"
-      });
-    }
-
-    for (const item of competitors) {
-      await CompetitorSuggestions.create({
-        user_id: userId,
-        organization_name: item.competitor_name,
-        domain: item.domain,
-        keywords: item.keywords,
-        image_url: item.image_url,
-        isSelected: false,
-        status: "active"
-      });
-    }
 
     await User.update(
       { brand_register: 1 },
@@ -314,7 +289,6 @@ const brandRegistration = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Brand Registration successful",
-      competitor_count: competitors.length,
       // domain_authority: authorityResults // commented out
     });
 

@@ -27,7 +27,7 @@ const Brand = sequelize.define(
     },
     status: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true, 
+      defaultValue: true,
     },
     keywords: {
       type: Sequelize.JSON,
@@ -35,7 +35,7 @@ const Brand = sequelize.define(
     },
     localArea:{
       type: DataTypes.BOOLEAN,
-          defaultValue: false, 
+          defaultValue: false,
     },
     cities:{
       type: DataTypes.JSONB,
@@ -57,10 +57,7 @@ const Brand = sequelize.define(
       type:DataTypes.STRING,
       allowNull:true
     },
-    gbp_refresh_token: {
-  type: DataTypes.STRING,
-  allowNull: true,
-},
+
      gsc_refresh_token:{
       type:DataTypes.STRING,
       allowNull:true
@@ -82,11 +79,12 @@ const Brand = sequelize.define(
       allowNull:true
     },
   },
-
+ 
   {
     tableName: "brands",
-    timestamps: true, 
+    timestamps: true,
   }
 );
-
+ 
 module.exports = Brand;
+ 
