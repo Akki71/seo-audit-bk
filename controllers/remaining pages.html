@@ -1,0 +1,188 @@
+<div class="section">
+
+  <div class="page-header">
+    <div class="bar"></div>
+    <h2>3–6 Month SEO Roadmap</h2>
+  </div>
+
+  <div class="dashboard-card roadmap-card">
+    <ul class="roadmap-list">
+      ${(data?.roadmap || []).map((r) => `<li>${r}</li>`).join("")}
+    </ul>
+  </div>
+
+</div>
+
+
+<!-- PAGE 33 : COMPETITOR ANALYSIS -->
+<div class="section">
+
+  <div class="section">
+    <div class="page-header">
+      <div class="bar"></div>
+      <h2>Competitor Analysis</h2>
+    </div>
+
+    <div class="dashboard-card competitor-card">
+
+      <ul class="competitor-list">
+        ${(data?.competitors || [])
+          .map(
+            (c) => `
+              <li class="competitor-item">
+                <span class="competitor-name">${safe(c.name)}</span>
+                <span class="competitor-metrics">
+                  Traffic: ${safe(c.traffic)}, 
+                  Backlinks: ${safe(c.backlinks)}
+                </span>
+              </li>
+            `,
+          )
+          .join("")}
+      </ul>
+
+    </div>
+  </div>
+
+</div>
+
+
+<!-- PAGE : SEO APPROACH IMAGE FULL PAGE -->
+<div class="section center">
+<img
+    src="https://i.ibb.co/v6YyRRYJ/Chat-GPT-Image-Jan-22-2026-05-52-19-PM.png"
+    alt="SEO Approach Diagram"
+    style="
+      width: 100%;
+      max-height: 750px;
+      object-fit: contain;
+    "
+  />
+</div>
+
+
+  <div class="section">
+    <div class="page-header">
+      <div class="bar"></div>
+      <h2>AI / LLM Visibility Analysis</h2>
+    </div>
+
+    <div class="dashboard-card llm-card">
+      <ul class="llm-list">
+        <li>Entity Clarity: ${bool(data?.llm_visibility?.entity_ready)}</li>
+        <li>Schema Coverage: ${bool(data?.llm_visibility?.schema_ready)}</li>
+        <li>Brand Mentions: ${safe(data?.llm_visibility?.brand_mentions)}</li>
+      </ul>
+    </div>
+
+  </div>
+
+
+  
+<!-- PAGE 25 : BACKLINK PROFILE -->
+<div class="section">
+<div class="page-header">
+  <div class="bar"></div>
+  <h2>Backlink Profile</h2>
+</div>
+
+ 
+  <div class="dashboard-card">
+    <div class="metrics-grid">
+      <div class="metric">
+        <div class="metric-label">Total Backlinks</div>
+        <div class="metric-value">${safe(data?.backlink_profile?.total_backlinks)}</div>
+      </div>
+ 
+      <div class="metric">
+        <div class="metric-label">Referring Domains</div>
+        <div class="metric-value">${safe(data?.backlink_profile?.referring_domains)}</div>
+      </div>
+    </div>
+ 
+    <h3 style="margin-top:25px;">Backlink Types</h3>
+ 
+    ${(() => {
+      const dist = data?.backlink_profile?.distribution || {};
+      const total =
+        (dist.text || 0) +
+          (dist.image || 0) +
+          (dist.form || 0) +
+          (dist.frame || 0) || 1;
+
+      const row = (label, value) => {
+        const percent = Math.round((value / total) * 100);
+        return `
+          <div class="progress-row">
+            <div class="progress-label">${label}</div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${percent}%"></div>
+            </div>
+            <div class="progress-value">${percent}% (${value})</div>
+          </div>
+        `;
+      };
+
+      return `
+        ${row("Text", dist.text || 0)}
+        ${row("Image", dist.image || 0)}
+        ${row("Form", dist.form || 0)}
+        ${row("Frame", dist.frame || 0)}
+      `;
+    })()}
+ 
+    <div class="notice">
+      Backlink diversity is currently
+      <b class="red">Low</b>. More varied backlinks are recommended.
+    </div>
+  </div>
+</div>
+ 
+
+
+<!-- PAGE 24 : DOMAIN ANALYSIS -->
+<div class="section">
+ <div class="page-header">
+  <div class="bar"></div>
+  <h2>Analysis for Domain</h2>
+</div>
+
+ 
+  <div class="dashboard-card">
+    <div class="metrics-grid">
+      <div class="metric">
+        <div class="metric-label">Organic Traffic</div>
+        <div class="metric-value">${safe(data?.domain_analysis?.organic_traffic)}</div>
+      </div>
+ 
+      <div class="metric">
+        <div class="metric-label">Paid Traffic</div>
+        <div class="metric-value">${safe(data?.domain_analysis?.paid_traffic)}</div>
+      </div>
+ 
+      <div class="metric">
+        <div class="metric-label">Referring Domains</div>
+        <div class="metric-value">${safe(data?.domain_analysis?.referring_domains)}</div>
+      </div>
+ 
+      <div class="metric">
+        <div class="metric-label">Backlinks</div>
+        <div class="metric-value">${safe(data?.domain_analysis?.backlinks)}</div>
+      </div>
+    </div>
+ 
+    <div class="metrics-grid" style="margin-top:20px;">
+      <div class="metric">
+        <div class="metric-label">Organic Keywords</div>
+        <div class="metric-value">${safe(data?.domain_analysis?.organic_keywords)}</div>
+      </div>
+    </div>
+ 
+    <div class="notice">
+      The Domain performance is currently
+      <b class="red">Low</b>. There is strong scope for improvement through SEO optimization.
+    </div>
+  </div>
+</div>
+ 
+ 
