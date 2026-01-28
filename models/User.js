@@ -1,21 +1,59 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes, Sequelize } = require("sequelize");
+const { sequelize } = require("../config/database");
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+const User = sequelize.define(
+  "User",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    assistant_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    otp: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    otpExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    brand_register: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
   },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-  },
-});
+  {
+    tableName: "users",
+    timestamps: true,
+  }
+);
+
+// Associations will be defined after all models are loaded
+User.associate = (models) => {
+  User.hasMany(models.Topic, { foreignKey: "userId", as: "topics" });
+  User.hasMany(models.Prompt, { foreignKey: "userId", as: "prompts" });
+};
 
 module.exports = User;
