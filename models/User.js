@@ -9,10 +9,6 @@ const User = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    assistant_id: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     username: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -27,10 +23,6 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    isVerified: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     otp: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -39,10 +31,7 @@ const User = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
-    brand_register: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
+
   },
   {
     tableName: "users",

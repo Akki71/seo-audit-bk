@@ -1,5 +1,7 @@
 const OpenAI = require("openai");
 const { marked } = require("marked");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -1074,4 +1076,35 @@ console.log("Response", response)
   }
 };
 
+
+/**
+ * Generic prompt runner
+ */
+exports.runPrompt = async (prompt) => {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return response.choices[0].message.content;
+}
+
+
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+exports.runPromptGemini = async (prompt) => {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+
+  return response.text();
+};
 

@@ -6,6 +6,8 @@ const {
   generateResponse,
   generatePageLevelAudit,
   generateSeoAuditJson,
+  runPrompt,
+  runPromptGemini,
 } = require("../middlewares/generateResponse");
 const axios = require("axios");
 const { JSDOM } = require("jsdom");
@@ -19,367 +21,263 @@ const zlib = require("zlib");
 const getDomainAuthority = require("../utils/getDomainAuthority");
 
     const finalAuditJson = {
-        totals: {
-            pages: 1220,
-            missing_title: 7,
-            missing_meta: 17,
-            missing_h1: 19,
-            recommendations_count: 43,
-            images_missing_alt: 4912,
-            broken_links: 0
+        "totals": {
+            "pages": 10,
+            "missing_title": 0,
+            "missing_meta": 0,
+            "missing_h1": 0,
+            "recommendations_count": 0,
+            "images_missing_alt": 89,
+            "broken_links": 0
         },
-        overview: {
-            seo_grade: "A+",
-            recommendations_count: 43,
-            summary_text: "Excellent SEO health. Your website is highly optimized and follows best practices. Maintain consistency and monitor performance regularly."
+        "overview": {
+            "seo_grade": "A+",
+            "recommendations_count": 0,
+            "summary_text": "Excellent SEO health. Your website is highly optimized and follows best practices. Maintain consistency and monitor performance regularly."
         },
-        technical_fixes: {
-            schema_codes_found: true,
-            schema_note: "1203 pages contain structured data markup",
-            sitemap_present: true,
-            sitemap_url: "https://gulfpharmacy.com/sitemap.xml",
-            robots_txt_present: true,
-            sitemap_and_robots_note: null
+        "technical_fixes": {
+            "schema_codes_found": true,
+            "schema_note": "10 pages contain structured data markup",
+            "sitemap_present": true,
+            "sitemap_url": "https://gulfpharmacy.com/sitemap.xml",
+            "robots_txt_present": true,
+            "sitemap_and_robots_note": null
         },
-        ssl_security: {
-            https_supported: true,
-            certificate_valid: true,
-            trusted: true,
-            final_url: "https://gulfpharmacy.com/",
-            note: "SSL is properly configured. Secure HTTPS improves user trust, protects data transmission, and is a confirmed Google ranking factor.",
-            page: 1
+        "ssl_security": {
+            "https_supported": true,
+            "certificate_valid": true,
+            "trusted": true,
+            "final_url": "https://gulfpharmacy.com/",
+            "note": "SSL is properly configured. Secure HTTPS improves user trust, protects data transmission, and is a confirmed Google ranking factor.",
+            "page": 17
         },
-        title_optimization: {
-            duplicate_count: 6,
-            titles_below_30: 5,
-            titles_over_60: 1175,
-            max_title_length: 153,
-            max_length_title: "MID PHARMA - MIDDLE EAST PHARMACEUTICAL AND CHEMICAL INDUSTRIES AND MEDICAL APPLIANCES CO. – Order Now Online With Free Delivery In Dubai | Gulf Pharmacy"
+        "title_optimization": {
+            "duplicate_count": 0,
+            "titles_below_30": 0,
+            "titles_over_60": 9,
+            "max_title_length": 100,
+            "max_length_title": "Gulf Pharmacy Dubai | Get Up To 70% Off + Free Delivery On Pharmacy & Wellness Products Across Dubai"
         },
-        header_optimization: {
-            h1: {
-                missing: 19,
-                duplicate: 0,
-                multiple: 0,
-                over_70_characters: 0
+        "header_optimization": {
+            "h1": {
+                "missing": 0,
+                "duplicate": 0,
+                "multiple": 0,
+                "over_70_characters": 0
             },
-            h2: {
-                missing: 17,
-                duplicate: 0,
-                multiple: 1203,
-                over_70_characters: 2
+            "h2": {
+                "missing": 0,
+                "duplicate": 0,
+                "multiple": 10,
+                "over_70_characters": 0
             },
-            note: "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings."
+            "note": "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings."
         },
-        meta_description_optimization: {
-            missing_descriptions_count: 17,
-            note: "Optimize meta descriptions using targeted keywords to improve click-through rate."
+        "meta_description_optimization": {
+            "missing_descriptions_count": 0,
+            "note": "Optimize meta descriptions using targeted keywords to improve click-through rate."
         },
-        url_optimization: {
-            issues_list: [
-                {
-                    url: "https://gulfpharmacy.com/Ajax/cart/count",
-                    title: null,
-                    missing: [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    url: "https://gulfpharmacy.com/autocomplete",
-                    title: null,
-                    missing: [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/brand/j-uriach-y-compaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½a-sa",
-                    "title": "404",
-                    "missing": [
-                        "meta_description",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/brand/jobri",
-                    "title": "SQLSTATE[HY000] [1040] Too many connections (SQL: select `id` from `brands` where `slug` = jobri and `brands`.`deleted_at` is null limit 1)",
-                    "missing": [
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/brand/sidefarma-sociedade-industrial-de-expansÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½o-farmacÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½utica-sa",
-                    "title": "404",
-                    "missing": [
-                        "meta_description",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/cart-checkout",
-                    "title": "Gulf Pharmacy Dubai | Get Up To 70% Off + Free Delivery On Pharmacy & Wellness Products Across Dubai",
-                    "missing": [
-                        "h1"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/contact-us",
-                    "title": "Contact Gulf Pharmacy - Reach Out For Inquiries And Assistance",
-                    "missing": [
-                        "h1"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/customer-account",
-                    "title": "Gulf Pharmacy - Sign - In",
-                    "missing": [
-                        "h1"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/fetch-more-products",
-                    "title": null,
-                    "missing": [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/fetch-more-products-search",
-                    "title": null,
-                    "missing": [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/fetch-products-by-category",
-                    "title": null,
-                    "missing": [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/offers",
-                    "title": "Exclusive Pharmacy Offers & Discounts | Gulf Pharmacy",
-                    "missing": [
-                        "h1"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/offers/15-off",
-                    "title": null,
-                    "missing": [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                },
-                {
-                    "url": "https://gulfpharmacy.com/public/storage/product-image/17447851955jpg",
-                    "title": null,
-                    "missing": [
-                        "title",
-                        "meta_description",
-                        "h1",
-                        "h2"
-                    ]
-                }
-            ],
+        "url_optimization": {
+            "issues_list": [],
             "page": 11
         },
-        image_optimization: {
-            images_over_100kb: null,
-            missing_size_attributes: 13961,
-            missing_alt_text_count: 4912,
-            image_metadata_note: "Images should be optimized with descriptive alt text and appropriate sizing.",
-            page: 10
+        "image_optimization": {
+            "images_over_100kb": null,
+            "missing_size_attributes": 164,
+            "missing_alt_text_count": 89,
+            "image_metadata_note": "Images should be optimized with descriptive alt text and appropriate sizing.",
+            "page": 10
         },
-        overview_scores: {
-            on_page: "B",
-            links: "F",
-            usability: "A",
-            performance: "F",
-            social: "C",
-            page: 2
+        "overview_scores": {
+            "on_page": "A+",
+            "links": "F",
+            "usability": "A",
+            "performance": "F",
+            "social": "C",
+            "page": 2
         },
-        security: {
-            ssl_enabled: true
+        "security": {
+            "ssl_enabled": true
         },
-     page_speed: {
-            mobile: {
-                performance_score: 10,
-                fcp: 8518.595412077944,
-                lcp: 18249.716881668875,
-                cls: 0.7410256107775248,
-                tbt: 964.5,
-                ttfb: 278,
-                speed_index: 15948.617376833869
+        "page_speed": {
+            "mobile": {
+                "performance_score": 13,
+                "fcp": 8586.558555036077,
+                "lcp": 26863.751283181573,
+                "cls": 0.7304616074272434,
+                "tbt": 776.5,
+                "ttfb": 269,
+                "speed_index": 16416.27197206219
             },
-            desktop: {
-                performance_score: 17,
-                fcp: 2115.1831473574407,
-                lcp: 4712.804114727809,
-                cls: 0.327634369871863,
-                tbt: 771.5000000000014,
-                ttfb: 248,
-                speed_index: 5959.315762300079
+            "desktop": {
+                "performance_score": 10,
+                "fcp": 2144.695927048868,
+                "lcp": 4539.520772073192,
+                "cls": 0.8892004752067574,
+                "tbt": 731.9999999999995,
+                "ttfb": 332,
+                "speed_index": 6274.524352376229
             }
         },
-        domain_analysis: {
-            authority_score: null,
-            organic_traffic: 6851,
-            paid_traffic: 0,
-            referring_domains: 0,
-            backlinks: 0,
-            organic_keywords: 10,
-            traffic_share: 0
+        "domain_analysis": {
+            "authority_score": null,
+            "organic_traffic": 6862,
+            "paid_traffic": 0,
+            "referring_domains": 0,
+            "backlinks": 0,
+            "organic_keywords": 10,
+            "traffic_share": 0
         },
-        backlink_profile: {
-            total_backlinks: 0,
-            referring_domains: 0,
-            distribution: {
-                text: 0,
-                image: 0,
-                form: 0,
-                frame: 0
+        "backlink_profile": {
+            "total_backlinks": 0,
+            "referring_domains": 0,
+            "distribution": {
+                "text": 0,
+                "image": 0,
+                "form": 0,
+                "frame": 0
             }
         },
-        redirects: {
-            total_redirects: 0,
-            redirect_urls: [],
-            note: "No redirect issues detected. All URLs resolve directly without unnecessary redirects.",
-            page: 9
+        "redirects": {
+            "total_redirects": 0,
+            "redirect_urls": [],
+            "note": "No redirect issues detected. All URLs resolve directly without unnecessary redirects.",
+            "page": 9
         },
-        security_checks: {
-            https_enabled: true,
-            certificate_valid: true,
-            not_expired: true,
-            trusted: true,
-            secure_hash: true
+        "security_checks": {
+            "https_enabled": true,
+            "certificate_valid": true,
+            "not_expired": true,
+            "trusted": true,
+            "secure_hash": true
         },
-        schema_validation: {
-            total_pages_with_schema: 1203,
-            pages_missing_schema: 17,
-            rich_results_detected: true
+        "schema_validation": {
+            "total_pages_with_schema": 10,
+            "pages_missing_schema": 0,
+            "rich_results_detected": true
         },
-        social_links: {
-            facebook: [
+        "social_links": {
+            "facebook": [
                 "https://www.facebook.com/GulfPharmacy1/"
             ],
-            instagram: [
+            "instagram": [
                 "https://www.instagram.com/gulfpharmacydubai"
             ],
-            twitter: [
+            "twitter": [
                 "https://x.com/GulfPharmacy"
             ],
-            linkedin: [
+            "linkedin": [
                 "https://www.linkedin.com/company/gulf-pharmacy/?originalSubdomain=ae"
             ],
-            youtube: []
+            "youtube": []
         },
-        trending_keywords: {
-            rows: [
+        "trending_keywords": {
+            "rows": [
                 {
                     "name": "gulf pharmacy",
-                    "clicks": 576,
-                    "impressions": 5620,
+                    "clicks": 573,
+                    "impressions": 5603,
+                    "avgPosition": 0,
+                    "ctr": 10.23,
                     "percent": "8.4"
                 },
                 {
                     "name": "panadol cold and flu",
-                    "clicks": 262,
-                    "impressions": 94959,
-                    "percent": "3.8"
+                    "clicks": 257,
+                    "impressions": 94377,
+                    "avgPosition": 0,
+                    "ctr": 0.27,
+                    "percent": "3.7"
                 },
                 {
                     "name": "gulf pharmacy dubai",
                     "clicks": 96,
-                    "impressions": 535,
+                    "impressions": 537,
+                    "avgPosition": 0,
+                    "ctr": 17.88,
                     "percent": "1.4"
                 },
                 {
                     "name": "microsynergy pharmaceuticals fzco",
                     "clicks": 51,
-                    "impressions": 1597,
+                    "impressions": 1606,
+                    "avgPosition": 0,
+                    "ctr": 3.18,
                     "percent": "0.7"
                 },
                 {
                     "name": "daktarin cream",
                     "clicks": 34,
                     "impressions": 1968,
+                    "avgPosition": 0,
+                    "ctr": 1.73,
                     "percent": "0.5"
                 },
                 {
                     "name": "salibet ointment",
                     "clicks": 25,
-                    "impressions": 3300,
+                    "impressions": 3318,
+                    "avgPosition": 0,
+                    "ctr": 0.75,
                     "percent": "0.4"
                 },
                 {
                     "name": "gulfpharmacy",
                     "clicks": 23,
                     "impressions": 85,
+                    "avgPosition": 0,
+                    "ctr": 27.06,
                     "percent": "0.3"
                 },
                 {
                     "name": "fresubin 2kcal",
                     "clicks": 22,
-                    "impressions": 683,
+                    "impressions": 689,
+                    "avgPosition": 0,
+                    "ctr": 3.19,
                     "percent": "0.3"
                 },
                 {
                     "name": "alkacure",
                     "clicks": 21,
                     "impressions": 1227,
+                    "avgPosition": 0,
+                    "ctr": 1.71,
                     "percent": "0.3"
                 },
                 {
                     "name": "annora pharma fz-llc",
                     "clicks": 21,
-                    "impressions": 292,
+                    "impressions": 291,
+                    "avgPosition": 0,
+                    "ctr": 7.22,
                     "percent": "0.3"
                 }
             ]
         },
-        trending_urls: {
-            rows: [
+        "trending_urls": {
+            "rows": [
                 {
                     "url": "https://gulfpharmacy.com/",
-                    "impressions": 89930,
-                    "clicks": 1382,
-                    "percent": "8.0"
+                    "impressions": 89389,
+                    "clicks": 1378,
+                    "percent": "7.9"
                 },
                 {
                     "url": "https://gulfpharmacy.com/c/over-the-counter-medicines/p/panadol-cold-flu-night-tablets-pack-of-24",
-                    "impressions": 147183,
-                    "clicks": 387,
-                    "percent": "13.1"
+                    "impressions": 147120,
+                    "clicks": 383,
+                    "percent": "13.0"
                 },
                 {
                     "url": "https://gulfpharmacy.com/c/mother-and-baby/p/salibet-reduce-skin-allergy-ointment-30-g",
-                    "impressions": 29033,
-                    "clicks": 195,
+                    "impressions": 29369,
+                    "clicks": 194,
                     "percent": "2.6"
                 },
                 {
                     "url": "https://gulfpharmacy.com/brand/annora-pharma-fz-llc",
-                    "impressions": 4324,
+                    "impressions": 4341,
                     "clicks": 164,
                     "percent": "0.4"
                 },
@@ -391,208 +289,229 @@ const getDomainAuthority = require("../utils/getDomainAuthority");
                 },
                 {
                     "url": "https://gulfpharmacy.com/brand/microsynergy-pharmaceuticals-fzco",
-                    "impressions": 3381,
+                    "impressions": 3397,
                     "clicks": 104,
                     "percent": "0.3"
                 },
                 {
                     "url": "https://gulfpharmacy.com/c/otc-medicines-kids/p/zentel-oral-suspension-20-ml",
-                    "impressions": 12354,
+                    "impressions": 12393,
                     "clicks": 91,
                     "percent": "1.1"
                 },
                 {
                     "url": "https://gulfpharmacy.com/c/nutrition-supplements/p/fresubin-2kcal-drink-vanilla-200ml",
-                    "impressions": 2484,
+                    "impressions": 2495,
                     "clicks": 85,
                     "percent": "0.2"
                 },
                 {
                     "url": "https://gulfpharmacy.com/c/otc-medicines-kids/s/deworming",
-                    "impressions": 6564,
-                    "clicks": 77,
+                    "impressions": 6644,
+                    "clicks": 76,
                     "percent": "0.6"
                 },
                 {
                     "url": "https://gulfpharmacy.com/contact-us",
-                    "impressions": 31057,
-                    "clicks": 72,
-                    "percent": "2.8"
+                    "impressions": 30936,
+                    "clicks": 71,
+                    "percent": "2.7"
                 }
             ]
         },
-        google_analytics: {
-            google_analytics_found: true,
-            summary: {
-                sessions: 15397,
-                pageviews: 20776,
-                avg_session_duration_minutes: 1.15,
-                bounce_rate_percent: 47.8,
-                conversion_rate_percent: 0.21,
-                total_conversions: 34
+        "google_analytics": {
+            "google_analytics_found": true,
+            "summary": {
+                "sessions": 15387,
+                "pageviews": 20733,
+                "avg_session_duration_minutes": 1.15,
+                "bounce_rate_percent": 47.87,
+                "conversion_rate_percent": 0.2,
+                "total_conversions": 33
             }
         },
-        google_search_console: {
-            google_search_console_found: true,
-            summary: {
-                clicks: 6851,
-                impressions: 1123717,
-                ctr: 0.61,
-                avg_position: 10.76365757570634
+        "google_search_console": {
+            "google_search_console_found": true,
+            "summary": {
+                "clicks": 6862,
+                "impressions": 1129631,
+                "ctr": 0.61,
+                "avg_position": 10.689431327575111
             }
         },
-        ga_present: true,
-        gsc_present: true,
-        googleServicesFromPages: {
-            google_analytics: true,
-            google_search_console: true,
-            google_my_business: false
+        "ga_present": true,
+        "gsc_present": true,
+        "googleServicesFromPages": {
+            "google_analytics": false,
+            "google_search_console": true,
+            "google_my_business": false
         },
-        document_title: "https://gulfpharmacy.com/",
-        basic_setup: {
-            google_analytics_found: true,
-            google_search_console_found: true,
-            google_search_console_note: "GSC data available for analysis",
-            google_my_business_found: false,
-            page: 3
+        "document_title": "https://gulfpharmacy.com/",
+        "basic_setup": {
+            "google_analytics_found": true,
+            "google_search_console_found": true,
+            "google_search_console_note": "GSC data available for analysis",
+            "google_my_business_found": false,
+            "page": 3
         },
-        broken_links: {
-            contains_broken_links: false,
-            rows: [],
-            page: 12
+        "broken_links": {
+            "contains_broken_links": false,
+            "rows": [],
+            "page": 12
         },
-        top_priority_action_plan: {
-            week_1_technical: [
+        "top_priority_action_plan": {
+            "week_1_technical": [
                 "Submit sitemap.xml in Google Search Console and validate index coverage.",
-                "Ensure all pages are served over HTTPS.",
-                "Fix page speed issues on mobile and desktop.",
-                "Check and update robots.txt for optimal crawlability.",
-                "Implement structured data on pages missing schema.",
-                "Review and optimize Core Web Vitals metrics."
+                "Ensure all pages are served over HTTPS to improve security.",
+                "Check and optimize page speed to improve user experience.",
+                "Validate structured data markup on all pages.",
+                "Review and fix any potential crawlability issues."
             ],
-            week_2_on_page: [
-                "Resolve duplicate title tags across the site.",
-                "Add missing meta descriptions to pages.",
-                "Ensure all pages have a unique H1 tag.",
-                "Optimize titles that are too long or too short.",
-                "Add alt text to images missing descriptions.",
-                "Improve URL readability and structure."
+            "week_2_on_page": [
+                "Optimize titles over 60 characters for better search visibility.",
+                "Ensure all images have descriptive alt text.",
+                "Review and improve meta descriptions to enhance CTR.",
+                "Check for any missing or duplicate H1 tags.",
+                "Enhance URL readability for better user experience."
             ],
-            week_3_content_internal_links: [
-                "Expand content on pages with low impressions and clicks.",
+            "week_3_content_internal_links": [
+                "Identify and expand content on pages with low impressions.",
                 "Add internal links from high-traffic pages to underperforming pages.",
-                "Optimize anchor text for internal links.",
-                "Identify and fill content gaps based on top search queries.",
-                "Enhance content on top-performing pages for better engagement.",
-                "Review and improve thin content pages."
+                "Optimize anchor text for better keyword relevance.",
+                "Review top-performing pages and scale content strategies.",
+                "Strengthen thin content to improve engagement."
             ],
-            week_4_measurement: [
-                "Set up GA conversion tracking for key actions.",
-                "Validate GSC indexing and coverage reports.",
-                "Monitor performance metrics regularly.",
-                "Track keyword rankings and adjust strategy accordingly.",
-                "Ensure accurate dashboard reporting for monthly benchmarking.",
-                "Review and update event tracking in GA."
+            "week_4_measurement": [
+                "Configure GA conversion tracking for primary lead form.",
+                "Monitor GSC indexing and validate any issues.",
+                "Set up performance monitoring dashboards.",
+                "Track ranking changes for targeted keywords.",
+                "Benchmark monthly performance metrics for growth analysis."
             ],
-            page: 14
+            "page": 14
         },
-        graph_data: {
-            seo_health_score: 0,
-            seo_health_breakdown: {
-                on_page: 0,
-                content: 0,
-                internal_links: 0,
-                technical: 0
+        "graph_data": {
+            "seo_health_score": 0,
+            "seo_health_breakdown": {
+                "on_page": 0,
+                "content": 0,
+                "internal_links": 0,
+                "technical": 0
             },
-            seo_performance_score: 0,
-        performance_metrics: {
-                impressions: 1123717,
-                clicks: 6851,
-                ctr: 0.61,
-                avg_position: 10.76365757570634
+            "seo_performance_score": 0,
+            "performance_metrics": {
+                "impressions": 1129631,
+                "clicks": 6862,
+                "ctr": 0.61,
+                "avg_position": 10.689431327575111
             },
-            page: 15
+            "page": 15
         },
-        voice_search: {
-            faq_present: false,
-            optimized: false,
-            page: 30
+        "voice_search": {
+            "faq_present": false,
+            "optimized": false,
+            "page": 30
         },
-        mobile_usability: {
-            viewport_ok: true,
-            tap_targets_ok: true,
-            responsive: true,
-            page: 31
+        "mobile_usability": {
+            "viewport_ok": true,
+            "tap_targets_ok": true,
+            "responsive": true,
+            "page": 31
         },
-        competitors: [
+        "competitors": [
             {
-                name:" Competitor A",
-                traffic: 1200,
-                backlinks: 340
+                "name": "Competitor A",
+                "traffic": 1200,
+                "backlinks": 340
             },
             {
-                name:" Competitor B",
-                traffic: 890,
-                backlinks: 210
+                "name": "Competitor B",
+                "traffic": 890,
+                "backlinks": 210
             }
         ],
-        llm_visibility: {
-            entity_ready: false,
-            schema_ready: false,
-            brand_mentions: 0,
-            page: 34
+        "llm_visibility": {
+            "entity_ready": false,
+            "schema_ready": false,
+            "brand_mentions": 0,
+            "page": 34
         },
-        keyword_strategy: [
-            "Focus on 'gulf pharmacy' and related terms with high impressions and clicks.",
-            "Optimize content for 'panadol cold and flu' to capture more search traffic.",
-            "Enhance visibility for 'gulf pharmacy dubai' with local SEO tactics.",
-            "Target 'microsynergy pharmaceuticals fzco' with specific content strategies.",
-            "Leverage 'daktarin cream' keyword for product-specific searches."
+        "keyword_strategy": [
+            "Focus on 'gulf pharmacy' to leverage high CTR and impressions.",
+            "Optimize for 'panadol cold and flu' due to high impressions.",
+            "Enhance visibility for 'gulf pharmacy dubai' with high CTR.",
+            "Target 'daktarin cream' for improved search presence.",
+            "Explore opportunities with 'salibet ointment' for better reach."
         ],
-        content_strategy: [
-            "Expand content on pages with low impressions to improve visibility.",
-            "Create detailed guides for top search queries like 'panadol cold and flu'.",
-            "Develop content around 'gulf pharmacy dubai' to strengthen local presence.",
-            "Enhance product descriptions for items like 'salibet ointment'.",
-            "Address content gaps identified in GSC data for better engagement."
+        "content_strategy": [
+            "Expand content on low-impression pages to increase visibility.",
+            "Create detailed guides on popular products like 'panadol cold and flu'.",
+            "Develop content around 'gulf pharmacy dubai' to capture local searches.",
+            "Enhance product descriptions for 'daktarin cream' to improve engagement.",
+            "Leverage high CTR keywords for content expansion."
         ],
-        roadmap: [
+        "roadmap": [
             "Implement structured data across all pages to enhance search visibility.",
-            "Optimize page speed for both mobile and desktop to improve user experience.",
-            "Ensure all pages have unique and descriptive meta tags.",
-            "Expand internal linking strategy to boost page authority.",
-            "Regularly monitor and update SEO strategies based on performance data."
+            "Optimize page speed to improve user experience and rankings.",
+            "Enhance internal linking to distribute page authority effectively.",
+            "Focus on content expansion for low-performing pages.",
+            "Regularly monitor and adjust SEO strategies based on performance data."
         ],
-        three_main_search_ranking_factors: {
-            factors: [
-                "Improve page speed to enhance user experience and rankings.",
-                "Optimize on-page elements like titles and meta descriptions.",
-                "Expand content and internal linking to boost engagement and authority."
+        "three_main_search_ranking_factors": {
+            "factors": [
+                "Page speed optimization to improve user experience and rankings.",
+                "Structured data implementation to enhance search visibility.",
+                "Internal linking strategy to distribute page authority effectively."
             ],
-            page: 37
+            "page": 37
         },
-        content_wise_study: {
-            insights: [
-                "Many pages lack unique H1 tags, impacting SEO performance.",
-                "Several images are missing alt text, reducing accessibility.",
-                "Duplicate title tags are present, causing potential confusion for search engines.",
-                "Content gaps exist for high-impression keywords, indicating expansion opportunities.",
-                "Internal linking is underutilized, affecting page authority distribution."
+        "content_wise_study": {
+            "insights": [
+                "Titles over 60 characters need optimization for better search visibility.",
+                "Structured data is present but requires regular validation.",
+                "Internal linking can be improved to enhance page authority distribution.",
+                "Meta descriptions are well-optimized but can be further enhanced.",
+                "Image alt text is missing on several images, impacting accessibility."
             ],
-            page: 38
+            "page": 38
         },
-        activities_required: {
-            actions: [
+        "activities_required": {
+            "actions": [
                 "Submit sitemap.xml in Google Search Console.",
-                "Fix duplicate title tags on identified pages.",
-                "Add missing meta descriptions to improve CTR.",
+                "Optimize titles exceeding 60 characters.",
                 "Ensure all images have descriptive alt text.",
-                "Optimize page speed for better user experience.",
-                "Expand content on low-impression pages.",
-                "Enhance internal linking to improve navigation.",
-                "Monitor SEO performance metrics regularly."
+                "Validate structured data markup on all pages.",
+                "Monitor GSC indexing and validate any issues.",
+                "Enhance internal linking from high-traffic pages.",
+                "Configure GA conversion tracking for primary lead form.",
+                "Regularly monitor and adjust SEO strategies based on performance data."
             ],
-            page: 39
+            "page": 39
+        },
+        "seoAuthority": {
+            "organicTraffic": 2594,
+            "paidTraffic": 0,
+            "impressions": 331873,
+            "ctr": 0.78,
+            "avgPosition": 5.19,
+            "organicKeywords": 1000,
+            "domainAuthority": 11,
+            "pageAuthority": 23,
+            "spamScore": 3
+        },
+        "seo_links": {
+            "referringDomains": 46,
+            "backlinks": 116,
+            "totalBacklinks": 3349315,
+            "backlinkTypes": {
+                "dofollow": 51,
+                "nofollow": 65,
+                "redirect": 2
+            }
+        },
+        "opportunities": {
+            "lowCTRKeywords": 50,
+            "nearTop10Keywords": 471
         },
 
     };
@@ -4710,7 +4629,65 @@ img {
     </div>
 
   </div>
+  </div>
 
+ <div class="section">
+ <div class="page-header">
+  <div class="bar"></div>
+  <h2>Analysis for Domain</h2>
+</div>
+
+ 
+  <div class="dashboard-card">
+    <div class="metrics-grid">
+          <div class="metric">
+        <div class="metric-label">Domain Authority</div>
+        <div class="metric-value">${safe(data?.seoAuthority?.domainAuthority)}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Organic Traffic</div>
+        <div class="metric-value">${safe(data?.seoAuthority?.organicTraffic)}</div>
+      </div>
+ 
+
+ 
+      <div class="metric">
+        <div class="metric-label">Paid Traffic</div>
+        <div class="metric-value">${safe(data?.seoAuthority?.paidTraffic)}</div>
+      </div>
+ 
+      <div class="metric">
+        <div class="metric-label">Backlinks</div>
+        <div class="metric-value">${safe(data?.seo_links?.backlinks)}</div>
+      </div>
+    </div>
+ 
+    <div class="metrics-grid" style="margin-top:20px;">
+      <div class="metric">
+        <div class="metric-label">Organic Keywords</div>
+        <div class="metric-value">${safe(data?.seoAuthority?.organicKeywords)}</div>
+      </div>
+ 
+
+   
+      <div class="metric">
+        <div class="metric-label">Spam Score</div>
+        <div class="metric-value">${safe(data?.seoAuthority?.spamScore)}</div>
+      </div>
+
+ 
+       <div class="metric">
+        <div class="metric-label">Referring Domains</div>
+        <div class="metric-value">${safe(data?.seo_links?.referringDomains)}</div>
+      </div>
+       </div>
+ 
+<div class="notice">
+  The domain performance reflects healthy potential, with opportunities available to further enhance SEO visibility and growth.
+</div>
+
+  </div>
+ </div>
 
 
 ${
@@ -5504,26 +5481,23 @@ exports.generatePdf = async (req, res) => {
     const start = new Date(endDate);
     start.setMonth(start.getMonth() - 6);
     const startDate = start.toISOString().split("T")[0];
-   const getdata = await getGSCDataAndSEOOverview({
-      siteUrl :domain.domain,        
-  refreshToken: domain.gsc_refresh_token,       
-  startDate: startDate,   
-  endDate: endDate
- });
 
 
-    // const urls = await Urls.findAll({ where: { domainId: id } });
-    // if (!urls.length) {
-    //   return res.json({
-    //     status: false,
-    //     message: "No URLs found for domain",
-    //   });
-    // }
-     const Url = await getUrlsFromSitemap(`${domain.domain}sitemap.xml`);
 
-    const pageUrls = Url.map((u) => u.url).slice(0, 50);
+    const urls = await Urls.findAll({ where: { domainId: id } });
 
-console.log("url fetch", Url.length);
+//      const Urls = await getUrlsFromSitemap(`${domain.domain}sitemap.xml`);
+//     if (!Urls.length) {
+//       return res.json({
+//         status: false,
+//         message: "No URLs found for domain",
+//       });
+//     }
+    const pageUrls = Urls.map((u) => u.url);
+//     const pageUrls = Urls.slice(0, 10);
+
+
+// console.log("url fetch", Urls.length);
 
         /* ------------------------------------
            2. Crawl pages
@@ -5532,21 +5506,21 @@ console.log("url fetch", Url.length);
     let pagesData = await fetchPagesInBatches(pageUrls, 5);
     pagesData = await removeDuplicatePages(pagesData);
     console.log("after pagesData", pagesData.length);
-//     // console.log("pagesData", pagesData[0]);
+    // console.log("pagesData", pagesData[0]);
 
-// await Webpage.bulkCreate(
-//   pagesData.map((page) => ({
-//     domainId: 8,
-//     url: page.url,
-//     title: page?.data?.title || '',
-//     date: new Date(),
-//     meta_description: page?.data?.meta_description || '',
-//     body_text: page?.data?.body_text || '',
-//     canonical: page?.data?.canonical || '',
-//     h1: page?.data?.h1 || [],
-//     h2: page?.data?.h2 || [],
-//   }))
-// );
+// // await Webpage.bulkCreate(
+// //   pagesData.map((page) => ({
+// //     domainId: 8,
+// //     url: page.url,
+// //     title: page?.data?.title || '',
+// //     date: new Date(),
+// //     meta_description: page?.data?.meta_description || '',
+// //     body_text: page?.data?.body_text || '',
+// //     canonical: page?.data?.canonical || '',
+// //     h1: page?.data?.h1 || [],
+// //     h2: page?.data?.h2 || [],
+// //   }))
+// // );
 
 
   
@@ -5555,8 +5529,7 @@ console.log("url fetch", Url.length);
        3A. Fetch PageSpeed from DOMAIN URL
     ------------------------------------ */
 
-
-//     // console.log("🚀 Fetching PageSpeed for domain homepage...");
+ console.log("🚀 Fetching PageSpeed for domain homepage...");
 
     let pageSpeed = null;
 
@@ -5566,7 +5539,7 @@ console.log("url fetch", Url.length);
         desktop: await fetchPageSpeed(domain.domain, "desktop"),
       };
 
-//       console.log("✅ Domain PageSpeed:", domain.domain, pageSpeed);
+      console.log("✅ Domain PageSpeed:", domain.domain, pageSpeed);
     }
 
     if (!pagesData.length) {
@@ -5575,11 +5548,18 @@ console.log("url fetch", Url.length);
         message: "No page HTML data fetched",
       });
     }
-    /* ------------------------------------
-           3. Fetch GA + GSC
-        ------------------------------------ */
+//     /* ------------------------------------
+//            3. Fetch GA + GSC
+//         ------------------------------------ */
 
+    const getdata = await getGSCDataAndSEOOverview({
+      siteUrl :domain.domain,        
+  refreshToken: domain.gsc_refresh_token,       
+  startDate: startDate,   
+  endDate: endDate
+ });
 
+// //  return res.json({success:true, data:getdata});
     const gaData = domain.ga_refresh_token
       ? await getGASeoData({
           refreshToken: domain.ga_refresh_token,
@@ -5597,6 +5577,8 @@ console.log("url fetch", Url.length);
           endDate,
         })
       : null;
+
+
 console.log("ga gsc fetch");
 
 
@@ -5769,25 +5751,199 @@ await page.pdf({
   }
 };
 
+function extractPureJSON(text) {
+  if (!text || typeof text !== "string") {
+    throw new Error("Invalid LLM response");
+  }
+
+  let cleaned = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1) {
+    throw new Error("No JSON object found in LLM response");
+  }
+
+  cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+
+  return cleaned;
+}
+
+exports.getLLMResponse = async (req, res) => {
+  try {
+    const { domain } = req.body;
+
+    const pagesData = await fetchPagesInBatches([domain], 1);
+
+    const promptForInformation = `
+Analyze the official website ${domain} and determine its business details.
+I have attached webpage data for reference:
+${JSON.stringify(pagesData)}
+
+Respond ONLY in valid JSON using this exact format:
+{
+  "domain": "${domain}",
+  "business_type": "string",
+  "city": "string or null",
+  "state": "string or null",
+  "country": "string or null",
+  "services": ["string"]
+}
+
+Rules:
+- Use null ONLY if information is truly missing
+- Prefer explicit mentions over guesses
+- Infer location if address, phone code, or city name appears
+- No explanations
+`;
+
+
+    const llmResponse = await runPrompt(promptForInformation);
+    const cleanLocationJSON = extractPureJSON(llmResponse);
+    const results = JSON.parse(cleanLocationJSON);
+
+    console.log("LOCATION RESULT:", results);
+
+    // ---- BEST COMPANIES PROMPT ----
+    const promptForData = `
+List the best ${results.business_type} brands in ${results.city}, ${results.state}, ${results.country}.
+
+Respond ONLY in valid JSON using this exact format:
+{
+  "city": "${results.city}",
+  "category": "${results.business_type}",
+  "brands": [
+    { "name": "brand Name" }
+  ]
+}
+`;
+const surpData = runSerp({
+
+  title:`List the best ${results.business_type} brands in ${results.city}, ${results.country}`
+})
+    // const rawCompanies = await runPrompt(promptForData);
+    // const cleanCompaniesJSON = extractPureJSON(rawCompanies);
+    // const companiesResult = JSON.parse(cleanCompaniesJSON);
+
+
+    // //gemini 
+    // const geminiResponse = await runPromptGemini(promptForData);
+    // const cleanGeminiJSON = extractPureJSON(geminiResponse);
+    // const geminiResult = JSON.parse(cleanGeminiJSON);
+
+
+
+
+    return res.json({
+      success: true,
+      location: results,
+//       openAi: companiesResult,
+// gemini:geminiResult,
+surpData
+    });
+
+  } catch (err) {
+    console.error("LLM ERROR", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+
+const xml2js = require("xml2js");
+const { runSerp } = require("../routes/getSurpData");
+
+const parser = new xml2js.Parser({ trim: true });
+
+
+const VISITED_SITEMAPS = new Set();
+
+async function parseSitemap(sitemapUrl, collectedUrls) {
+  if (VISITED_SITEMAPS.has(sitemapUrl)) return;
+  VISITED_SITEMAPS.add(sitemapUrl);
+
+  try {
+    const { data } = await axios.get(sitemapUrl, { timeout: 10000 });
+    const result = await parser.parseStringPromise(data);
+
+    // Case 1️⃣ sitemap contains URLs
+    if (result?.urlset?.url) {
+      result.urlset.url.forEach((item) => {
+        if (item.loc?.[0]) {
+          collectedUrls.add(item.loc[0]);
+        }
+      });
+    }
+
+    // Case 2️⃣ sitemap contains sitemap links
+    if (result?.sitemapindex?.sitemap) {
+      for (const sitemap of result.sitemapindex.sitemap) {
+        if (sitemap.loc?.[0]) {
+          await parseSitemap(sitemap.loc[0], collectedUrls);
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore unreachable or invalid sitemap files
+  }
+}
+
+async function fetchAllSitemapUrls(baseUrl) {
+  const collectedUrls = new Set();
+  VISITED_SITEMAPS.clear();
+
+  const cleanBase = baseUrl.replace(/\/$/, "");
+
+  const possibleSitemaps = [
+    `${cleanBase}/sitemap.xml`,
+    `${cleanBase}/sitemap_index.xml`,
+  ];
+
+  for (const sitemapUrl of possibleSitemaps) {
+    await parseSitemap(sitemapUrl, collectedUrls);
+  }
+
+  return Array.from(collectedUrls);
+}
+
 exports.getUrl = async (req, res) => {
   try {
-    const { id, url, limit = 500 } = req.body;
+    const { id, url, limit = 2000 } = req.body;
 
     if (!url) {
       return res.status(200).json({ error: "URL is required" });
     }
+
     if (!id) {
       return res.status(200).json({ error: "Invalid User" });
     }
 
-    const pageUrls = await crawlSite(url, Number(limit), 8);
+    let pageUrls = [];
 
+    // 🔍 STEP 1: Try sitemap (xml, index, nested, mixed)
+    pageUrls = await fetchAllSitemapUrls(url);
+
+    // 🕷️ STEP 2: Fallback to crawler
+    if (!pageUrls.length) {
+      pageUrls = await crawlSite(url, Number(limit), 8);
+    }
+
+    // 🛑 Nothing found
     if (!pageUrls.length) {
       return res.status(200).json({
         success: false,
         message: "No page URLs found",
       });
     }
+
+    pageUrls = pageUrls.slice(0, Number(limit));
 
     console.log("pageUrls count:", pageUrls.length);
 
@@ -5807,6 +5963,59 @@ exports.getUrl = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+exports.generatePageData = async (req, res) => {
+  try{
+    const { id } = req.query;
+    if (!id) {
+      return res.status(200).json({ error: "Invalid User" });
+    } 
+    // const domain = await Domain.findOne({ where: { id } });
+    // if (!domain) {
+    //   return res.json({
+    //     status: false,
+    //     message: "No domain data found",
+    //   });
+    // }
+    const urls = await Urls.findAll({ where: { domainId: id } });
+    if (!urls.length) {
+      return res.json({
+        status: false,
+        message: "No URLs found for domain",
+      });
+    }
+    const pageUrls = urls.map((u) => u.url);
+    let pagesData = await fetchPagesInBatches(pageUrls, 5);
+    pagesData = await removeDuplicatePages(pagesData);
+
+    await Webpage.bulkCreate(
+  pagesData.map((page) => ({
+    domainId: id,
+    url: page.url,
+    title: page?.data?.title || '',
+    date: new Date(),
+    meta_description: page?.data?.meta_description || '',
+    body_text: page?.data?.body_text || '',
+    canonical: page?.data?.canonical || '',
+    h1: page?.data?.h1 || [],
+    h2: page?.data?.h2 || [],
+  }))
+);
+
+    console.log("after pagesData", pagesData.length);
+    return res.json({
+      success: true,
+      pagesFetched: pagesData.length,
+    });
+  }
+  catch (err) {
+    console.error("❌ PAGE DATA ERROR", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+}
