@@ -73,6 +73,9 @@ async function collectAndStoreGSCDataForBrand(brand) {
     });
 
     if (exists) {
+  //      console.log(
+  //   `⏭️ GSC snapshot exists, skipping (${startDate} → ${endDate})`
+  // );
       current.setDate(current.getDate() + CHUNK_SIZE);
       continue;
     }

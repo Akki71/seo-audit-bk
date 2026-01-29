@@ -1,5 +1,6 @@
 const app = require('./app');
-require("./cron/gscCron");
+require("./cron/gscGaCron");
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
