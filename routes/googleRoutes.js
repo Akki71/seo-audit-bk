@@ -29,6 +29,7 @@ const {
   getOverallAnalyticsSummary,
   getSectionWiseSummary,
   getPageData,
+  collectAndStoreGAData,
 } = require("../controllers/googleController");
 
 const router = express.Router();
@@ -47,7 +48,7 @@ router.get("/analytics/accounts", authenticateToken, getGAAccounts);
 router.post("/analytics/getGa4Properties", authenticateToken, getGa4Properties);
 router.get("/analytics/getGAData", authenticateToken, getGAData);
 
-// router.post("/analytics/store-ga", authenticateToken, collectAndStoreGAData);
+router.post("/analytics/store-ga", authenticateToken, collectAndStoreGAData);
 // router.get("/analytics/get-ga-db", authenticateToken, getGADataFromDB);
 
 router.get("/search-console/sites", authenticateToken, getSearchConsoleSites);
@@ -64,7 +65,7 @@ router.post(
   authenticateToken,
   collectAndStoreGSCData,
 );
-router.get("/search-console/get-gsc-db", authenticateToken, getGSCDataFromDB);
+router.get("/search-console/get-gsc-ga-web-db", authenticateToken, getGSCDataFromDB);
 // router.get("/search-console/gemailtrigger", authenticateToken, gemailtrigger);
 
 // router.get(

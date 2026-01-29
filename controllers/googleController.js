@@ -2,6 +2,8 @@ const axios = require("axios");
 const { Brand ,BrandGbpData,Prompt,VisibilityLog} = require("../models");
 const { google } = require("googleapis");
 const GscSnapshot =require("../models/GscSnapshot");
+const GaSnapshot =require("../models/GaSnapshot");
+
 const { refreshGoogleAccessToken } = require("../utils/googleAuth");
 const { OAuth2Client } = require("google-auth-library");
 const OpenAI = require("openai");
@@ -9,8 +11,13 @@ const openaiClient = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const ChatHistory = require("../models/ChatHistory");
+const Webpage = require("../models/Webpage");
 const User = require("../models/User");
 const { collectAndStoreGSCDataForBrand } = require("../services/gscService");
+const {
+  collectAndStoreGADataForBrand,
+} = require("../services/gaService");
+
 const nodemailer = require("nodemailer");
 // const { sequelize } = require("../models");
 const { QueryTypes } = require("sequelize");
@@ -985,7 +992,6 @@ exports.getPageData = async (req, res) => {
     });
   }
 };
-
 exports.getOverallAnalyticsSummary = async (req, res) => {
   try {
     const { gscData, startDate, endDate } = req.body;
@@ -1160,78 +1166,10 @@ exports.getSectionWiseSummary = async (req, res) => {
   }
 };
 
-// exports.chatbotdata = async (req, res) => {
-//   try {
-//     let { chatId, message, keywords } = req.body || {};
-
-//     if (!message || typeof message !== "string") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Message is required",
-//       });
-//     }
-
-//     if (!chatId) {
-//       chatId = crypto.randomUUID();
-
-//       chatSessions[chatId] = {
-//         keywords: Array.isArray(keywords) ? keywords : [],
-//         messages: [],
-//       };
-//     }
-
-//     const session = chatSessions[chatId];
-
-//     if (!session) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Invalid chatId",
-//       });
-//     }
-
-//     // ✅ SYSTEM PROMPT WITH STORED KEYWORDS
-//     const systemPrompt = `
-// You are a helpful, friendly chatbot assisting users.
-// Use these trending keywords when relevant:
-// ${session.keywords.join(", ")}
-// `;
-
-//     const completion = await openaiClient.chat.completions.create({
-//       model: "gpt-4o-mini",
-//       messages: [
-//         { role: "system", content: systemPrompt },
-//         ...session.messages,
-//         { role: "user", content: message },
-//       ],
-//       temperature: 0.7,
-//     });
-
-//     const reply = completion.choices[0].message.content;
-
-//     // ✅ STORE CHAT HISTORY
-//     session.messages.push(
-//       { role: "user", content: message },
-//       { role: "assistant", content: reply }
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       chatId, // 👈 return chatId ALWAYS
-//       reply,
-//     });
-//   } catch (error) {
-//     console.error("Chatbot Error:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to generate chatbot response",
-//     });
-//   }
-// };
 
 exports.chatbotdata = async (req, res) => {
   try {
-    const { message, chat_id, keywords } = req.body;
+    const { message, chat_id, gsc_data } = req.body;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({
@@ -1265,9 +1203,9 @@ exports.chatbotdata = async (req, res) => {
 
     let content = message;
 
-    if (isFirstMessage && Array.isArray(keywords) && keywords.length > 0) {
-      content = `User keywords (remember and use these throughout this conversation):
-${keywords.join(", ")}
+    if (isFirstMessage && Array.isArray(gsc_data) && gsc_data.length > 0) {
+      content = `User data (remember and use these throughout this conversation):
+${gsc_data.join(", ")}
 
 User message:
 ${message}`;
@@ -1312,74 +1250,6 @@ ${message}`;
     });
   }
 };
-
-// exports.chatbotdata = async (req, res) => {
-//   try {
-//     let { chatId, message, keywords } = req.body;
-//     const userId = req.user.id;
-
-//     if (!message || typeof message !== "string") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Message is required",
-//       });
-//     }
-
-//     if (!chatId) {
-//       chatId = crypto.randomUUID();
-
-//       chatSessions[chatId] = {
-//         keywords: Array.isArray(keywords) ? keywords : [],
-//         messages: [],
-//       };
-//     }
-
-//     const session = chatSessions[chatId];
-
-//     const systemPrompt = `
-// You are a helpful, friendly chatbot assisting users.
-// Use these trending keywords when relevant:
-// ${session.keywords.join(", ")}
-// `;
-
-//     const completion = await openaiClient.chat.completions.create({
-//       model: "gpt-4o-mini",
-//       messages: [
-//         { role: "system", content: systemPrompt },
-//         ...session.messages,
-//         { role: "user", content: message },
-//       ],
-//       temperature: 0.7,
-//     });
-
-//     const reply = completion.choices[0].message.content;
-
-//     session.messages.push(
-//       { role: "user", content: message },
-//       { role: "assistant", content: reply }
-//     );
-
-//     await ChatHistory.create({
-//       user_id: userId,
-//       chat_id: chatId,
-//       question: message,
-//       answer: reply,
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       chatId,
-//       reply,
-//     });
-//   } catch (error) {
-//     console.error("Chatbot Error:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to generate chatbot response",
-//     });
-//   }
-// };
 exports.getChatHistory = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1449,440 +1319,6 @@ exports.deleteChat = async (req, res) => {
   }
 };
 
-// exports.collectAndStoreGSCData = async (req, res) => {
-//   try {
-//     const axios = require("axios");
-
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand || !brand.gsc_refresh_token || !brand.site_url) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not registered with Google Search Console",
-//       });
-//     }
-
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gsc_refresh_token
-//     );
-
-//     const siteUrl = brand.site_url;
-//     const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-//       siteUrl
-//     )}/searchAnalytics/query`;
-
-//     const fetchApi = async (body) => {
-//       const { data } = await axios.post(apiUrl, body, {
-//         headers: { Authorization: `Bearer ${access_token}` },
-//       });
-//       return data;
-//     };
-
-//     // GSC delay = 48 hours
-//     const today = new Date();
-//     today.setDate(today.getDate() - 2);
-
-//     const start = new Date();
-//     start.setMonth(today.getMonth() - 2);
-
-//     const ranges = [];
-//     let current = new Date(start);
-
-//     while (current < today) {
-//       const s = new Date(current);
-//       const e = new Date(current);
-//       e.setDate(e.getDate() + 2);
-
-//       ranges.push({
-//         startDate: s.toISOString().split("T")[0],
-//         endDate: e.toISOString().split("T")[0],
-//       });
-
-//       current.setDate(current.getDate() + 3);
-//     }
-
-//     let storedCount = 0;
-
-//     for (const { startDate, endDate } of ranges) {
-//       const exists = await GscSnapshot.findOne({
-//         where: {
-//           brand_id: brand.id,
-//           start_date: startDate,
-//           end_date: endDate,
-//         },
-//       });
-//       if (exists) continue;
-
-//       /* ---------------- SUMMARY ---------------- */
-//       const fetchSummary = async (searchType) => {
-//         const res = await fetchApi({
-//           startDate,
-//           endDate,
-//           dimensions: [],
-//           searchType,
-//         });
-
-//         const row = res.rows?.[0] || {};
-//         return {
-//           clicks: row.clicks || 0,
-//           impressions: row.impressions || 0,
-//           ctr: row.ctr ? (row.ctr * 100).toFixed(2) : "0.00",
-//           position: row.position || 0,
-//         };
-//       };
-
-//       const [web, discover, news] = await Promise.all([
-//         fetchSummary("web"),
-//         fetchSummary("discover"),
-//         fetchSummary("news"),
-//       ]);
-
-//       /* ---------------- TOP QUERIES ---------------- */
-//       const queryRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["query"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topKeywords =
-//         queryRes.rows?.map((r) => ({
-//           name: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//           percent:
-//             web.clicks > 0
-//               ? ((r.clicks / web.clicks) * 100).toFixed(1)
-//               : "0.0",
-//         })) || [];
-
-//       /* ---------------- TOP PAGES ---------------- */
-//       const pageRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["page"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topPages =
-//         pageRes.rows?.map((r) => ({
-//           url: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------------- DEVICES ---------------- */
-//       const deviceRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["device"],
-//         rowLimit: 3,
-//         searchType: "web",
-//       });
-
-//       const devices =
-//         deviceRes.rows?.map((r) => ({
-//           device: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------------- TOP COUNTRIES ---------------- */
-//       const countryRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["country"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topCountries =
-//         countryRes.rows?.map((r) => ({
-//           country: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------------- STORE JSON ---------------- */
-//       await GscSnapshot.create({
-//         user_id: req.user.id,
-//         brand_id: brand.id,
-//         start_date: startDate,
-//         end_date: endDate,
-//         gsc_data: {
-//           startDate,
-//           endDate,
-//           summary: {
-//             web,
-//             discover,
-//             news,
-//             totalQueries: topKeywords.length,
-//             totalPages: topPages.length,
-//           },
-//           topKeywords,
-//           topPages,
-//           topCountries,
-//           devices,
-//         },
-//       });
-
-//       storedCount++;
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "GSC data collected and stored successfully",
-//       storedRecords: storedCount,
-//     });
-//   } catch (error) {
-//     console.error("❌ collectAndStoreGSCData ERROR:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to collect and store GSC data",
-//     });
-//   }
-// };
-
-//static date 10 nov
-// exports.collectAndStoreGSCData = async (req, res) => {
-//   try {
-//     const axios = require("axios");
-
-//     /* =======================
-//        1️⃣ BRAND & TOKEN
-//     ======================= */
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand || !brand.gsc_refresh_token || !brand.site_url) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not registered with Google Search Console",
-//       });
-//     }
-
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gsc_refresh_token
-//     );
-
-//     const siteUrl = brand.site_url;
-//     const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-//       siteUrl
-//     )}/searchAnalytics/query`;
-
-//     const fetchApi = async (body) => {
-//       const { data } = await axios.post(apiUrl, body, {
-//         headers: {
-//           Authorization: `Bearer ${access_token}`,
-//         },
-//       });
-//       return data;
-//     };
-
-//     /* =======================
-//        2️⃣ DATE RULES (IMPORTANT)
-//     ======================= */
-//     const GSC_DELAY_DAYS = 2;
-//     const CHUNK_SIZE = 3;
-
-//     // Latest date GSC can return
-//     const maxAvailableDate = new Date();
-//     maxAvailableDate.setDate(maxAvailableDate.getDate() - GSC_DELAY_DAYS);
-//     maxAvailableDate.setHours(0, 0, 0, 0);
-
-//     // Fixed start date → Nov 10
-//     const START_DATE = new Date("2025-11-10");
-//     START_DATE.setHours(0, 0, 0, 0);
-
-//     /* =======================
-//        3️⃣ BUILD CHUNKS
-//     ======================= */
-//     const ranges = [];
-//     let current = new Date(START_DATE);
-
-//     while (current <= maxAvailableDate) {
-//       const chunkStart = new Date(current);
-//       const chunkEnd = new Date(chunkStart);
-//       chunkEnd.setDate(chunkEnd.getDate() + CHUNK_SIZE - 1);
-
-//       // 🚨 Cap end date to max available
-//       if (chunkEnd > maxAvailableDate) {
-//         chunkEnd.setTime(maxAvailableDate.getTime());
-//       }
-
-//       ranges.push({
-//         startDate: chunkStart.toISOString().split("T")[0],
-//         endDate: chunkEnd.toISOString().split("T")[0],
-//       });
-
-//       const diffDays =
-//         Math.floor(
-//           (chunkEnd.getTime() - chunkStart.getTime()) /
-//             (24 * 60 * 60 * 1000)
-//         ) + 1;
-
-//       // Move forward only if chunk is full
-//       if (diffDays === CHUNK_SIZE) {
-//         current.setDate(current.getDate() + CHUNK_SIZE);
-//       } else {
-//         break; // last partial chunk
-//       }
-//     }
-
-//     /* =======================
-//        4️⃣ FETCH & STORE
-//     ======================= */
-//     let storedCount = 0;
-
-//     for (const { startDate, endDate } of ranges) {
-//       // Skip if already stored
-//       const exists = await GscSnapshot.findOne({
-//         where: {
-//           brand_id: brand.id,
-//           start_date: startDate,
-//           end_date: endDate,
-//         },
-//       });
-//       if (exists) continue;
-
-//       /* ---------- SUMMARY ---------- */
-//       const fetchSummary = async (searchType) => {
-//         const res = await fetchApi({
-//           startDate,
-//           endDate,
-//           dimensions: [],
-//           searchType,
-//         });
-
-//         const row = res.rows?.[0] || {};
-//         return {
-//           clicks: row.clicks || 0,
-//           impressions: row.impressions || 0,
-//           ctr: row.ctr ? +(row.ctr * 100).toFixed(2) : 0,
-//           position: row.position || 0,
-//         };
-//       };
-
-//       const [web, discover, news] = await Promise.all([
-//         fetchSummary("web"),
-//         fetchSummary("discover"),
-//         fetchSummary("news"),
-//       ]);
-
-//       /* ---------- TOP QUERIES ---------- */
-//       const queryRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["query"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topKeywords =
-//         queryRes.rows?.map((r) => ({
-//           name: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//           percent:
-//             web.clicks > 0
-//               ? +((r.clicks / web.clicks) * 100).toFixed(1)
-//               : 0,
-//         })) || [];
-
-//       /* ---------- TOP PAGES ---------- */
-//       const pageRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["page"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topPages =
-//         pageRes.rows?.map((r) => ({
-//           url: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------- DEVICES ---------- */
-//       const deviceRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["device"],
-//         rowLimit: 3,
-//         searchType: "web",
-//       });
-
-//       const devices =
-//         deviceRes.rows?.map((r) => ({
-//           device: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------- COUNTRIES ---------- */
-//       const countryRes = await fetchApi({
-//         startDate,
-//         endDate,
-//         dimensions: ["country"],
-//         rowLimit: 10,
-//         searchType: "web",
-//       });
-
-//       const topCountries =
-//         countryRes.rows?.map((r) => ({
-//           country: r.keys?.[0],
-//           clicks: r.clicks || 0,
-//           impressions: r.impressions || 0,
-//         })) || [];
-
-//       /* ---------- STORE ---------- */
-//       await GscSnapshot.create({
-//         user_id: req.user.id,
-//         brand_id: brand.id,
-//         start_date: startDate,
-//         end_date: endDate,
-//         gsc_data: {
-//           startDate,
-//           endDate,
-//           summary: {
-//             web,
-//             discover,
-//             news,
-//             totalQueries: topKeywords.length,
-//             totalPages: topPages.length,
-//           },
-//           topKeywords,
-//           topPages,
-//           topCountries,
-//           devices,
-//         },
-//       });
-
-//       storedCount++;
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "GSC data collected and stored successfully",
-//       storedRecords: storedCount,
-//     });
-//   } catch (error) {
-//     console.error("❌ collectAndStoreGSCData ERROR:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to collect and store GSC data",
-//     });
-//   }
-// };
-
-
 exports.collectAndStoreGSCData = async (req, res) => {
   try {
     const brand = await Brand.findOne({
@@ -1910,10 +1346,41 @@ exports.collectAndStoreGSCData = async (req, res) => {
     });
   }
 };
+exports.collectAndStoreGAData = async (req, res) => {
+  try {
+    const brand = await Brand.findOne({
+      where: { user_id: req.user.id },
+    });
+
+    if (!brand || !brand.ga_refresh_token || !brand.property_id) {
+      return res.status(404).json({
+        success: false,
+        message: "Brand not registered with Google Analytics",
+      });
+    }
+
+    const storedCount = await collectAndStoreGADataForBrand(brand);
+
+    return res.json({
+      success: true,
+      storedRecords: storedCount,
+    });
+  } catch (err) {
+    console.error("❌ GA Controller error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to collect GA data",
+    });
+  }
+};
+
 
 //date_wise
 exports.getGSCDataFromDB = async (req, res) => {
   try {
+    /* =======================
+       🔐 BRAND CHECK
+    ======================= */
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
     });
@@ -1925,34 +1392,101 @@ exports.getGSCDataFromDB = async (req, res) => {
       });
     }
 
-    const snapshots = await GscSnapshot.findAll({
+    /* =======================
+       📊 GSC DATA (ARRAY)
+    ======================= */
+    const gscSnapshots = await GscSnapshot.findAll({
       where: { brand_id: brand.id },
       order: [["start_date", "ASC"]],
     });
 
-    if (!snapshots.length) {
+    const gscData = gscSnapshots.length
+      ? gscSnapshots.flatMap(row => row.gsc_data)
+      : [];
+
+    /* =======================
+       📈 GA DATA (ARRAY)
+    ======================= */
+    const gaSnapshots = await GaSnapshot.findAll({
+      where: { brand_id: brand.id },
+      order: [["start_date", "ASC"]],
+    });
+
+    const gaData = gaSnapshots.length
+      ? gaSnapshots.flatMap(row => row.ga_data)
+      : [];
+
+    /* =======================
+       🌐 WEBPAGES DATA (ARRAY)
+    ======================= */
+    const webpages = await Webpage.findAll({
+      where: {
+        domainId: "3", // 👈 string, matches model
+      },
+      attributes: [
+        "date",
+        "url",
+        "title",
+        "meta_description",
+        "body_text",
+        "canonical",
+        "h1",
+        "h2",
+      ],
+      order: [["date", "ASC"]],
+    });
+
+    const webpagesData = webpages.length
+      ? webpages.map(page => ({
+          date: page.date,
+          url: page.url,
+          title: page.title,
+          meta_description: page.meta_description,
+          body_text: page.body_text,
+          canonical: page.canonical,
+          h1: page.h1,
+          h2: page.h2,
+        }))
+      : [];
+
+    /* =======================
+       ❌ NO DATA FOUND
+    ======================= */
+    if (!gscData.length && !gaData.length && !webpagesData.length) {
       return res.status(200).json({
         success: true,
-        data: [],
-        message: "No GSC data found in DB",
+        data: {
+          gsc: [],
+          ga: [],
+          webpages: [],
+        },
+        message: "No GA, GSC, or Webpages data found in DB",
       });
     }
 
-    const gscData = snapshots.flatMap((row) => row.gsc_data);
-
+    /* =======================
+       ✅ FINAL RESPONSE
+    ======================= */
     return res.status(200).json({
       success: true,
-      message: "GSC data fetched from DB",
-      data: gscData,
+      message: "hey",
+      data: {
+        gsc: gscData,           // ✅ ARRAY
+        ga: gaData,             // ✅ ARRAY
+        webpages: webpagesData // ✅ ARRAY
+      },
     });
+
   } catch (error) {
-    console.error("getGSCDataFromDB error:", error);
+    console.error("getAnalyticsDataFromDB error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch GSC data from DB",
+      message: "Failed to fetch analytics data from DB",
     });
   }
 };
+
+
 // exports.getGSCDataFromDB = async (req, res) => {
 //   try {
 //     const userId = req.user.id;
