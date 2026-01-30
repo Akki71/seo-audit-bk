@@ -27,17 +27,17 @@ const { Op } = require("sequelize");
 const crypto = require("crypto");
 const GLOBAL_ASSISTANT_ID = process.env.GLOBAL_ASSISTANT_ID;
 // console.log('GLOBAL_ASSISTANT_ID',GLOBAL_ASSISTANT_ID)
-console.log("🔍 GBP OAUTH ENV CHECK:", {
-  CLIENT_ID: process.env.CLIENT_ID
-    ? `${process.env.CLIENT_ID}`
-    : "❌ MISSING",
+// console.log("🔍 GBP OAUTH ENV CHECK:", {
+//   CLIENT_ID: process.env.CLIENT_ID
+//     ? `${process.env.CLIENT_ID}`
+//     : "❌ MISSING",
 
-  CLIENT_SECRET: process.env.CLIENT_SECRET
-    ? `${process.env.CLIENT_SECRET}`
-    : "❌ MISSING",
+//   CLIENT_SECRET: process.env.CLIENT_SECRET
+//     ? `${process.env.CLIENT_SECRET}`
+//     : "❌ MISSING",
 
-  GBP_REDIRECT_URI: process.env.GBP_REDIRECT_URI || "❌ MISSING",
-});
+//   GBP_REDIRECT_URI: process.env.GBP_REDIRECT_URI || "❌ MISSING",
+// });
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,

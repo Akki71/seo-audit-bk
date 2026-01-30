@@ -33,14 +33,14 @@ const {
 } = require("../controllers/googleController");
 
 const router = express.Router();
-console.log({
-  startGBPOAuth,
-  getGBPAccounts,
-  selectGBPAccount,
-  getGBPLocations,
-  getGBPInsights,
-  refreshGBPInsights,
-});
+// console.log({
+//   startGBPOAuth,
+//   getGBPAccounts,
+//   selectGBPAccount,
+//   getGBPLocations,
+//   getGBPInsights,
+//   refreshGBPInsights,
+// });
 
 router.post("/tokens", authenticateToken, getGoogleTokens);
 
