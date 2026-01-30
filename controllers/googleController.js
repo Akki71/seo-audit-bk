@@ -1165,11 +1165,10 @@ exports.getSectionWiseSummary = async (req, res) => {
     });
   }
 };
-
-
+// with propt 
 exports.chatbotdata = async (req, res) => {
   try {
-    const { message, chat_id, gsc_data } = req.body;
+    const { message, chat_id, overalldata } = req.body;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({
@@ -1181,15 +1180,33 @@ exports.chatbotdata = async (req, res) => {
     const user_id = req.user.id;
     const chatId = chat_id || crypto.randomUUID();
 
+    /* =======================
+       🔎 GET DOMAIN FROM BRAND
+    ======================= */
+    const brand = await Brand.findOne({
+      where: { user_id },
+      attributes: ["domain"],
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        success: false,
+        message: "Brand not found for user",
+      });
+    }
+
+    const siteName = brand.domain;
+
+    /* =======================
+       💬 THREAD LOGIC
+    ======================= */
     const previousCount = await ChatHistory.count({
       where: { chat_id: chatId, user_id },
     });
 
-    const isFirstMessage = previousCount === 0;
-
     let THREAD_ID;
 
-    if (isFirstMessage) {
+    if (previousCount === 0) {
       const thread = await openaiClient.beta.threads.create();
       THREAD_ID = thread.id;
     } else {
@@ -1198,19 +1215,42 @@ exports.chatbotdata = async (req, res) => {
         order: [["createdAt", "DESC"]],
       });
       THREAD_ID = lastRow.thread_id;
-      console.log("REUSING THREAD:", THREAD_ID);
     }
 
-    let content = message;
+    /* =======================
+       🧠 SYSTEM PROMPT (ALWAYS)
+    ======================= */
+    const systemPrompt = `
+You are an AI assistant for the website: ${siteName}.
 
-    if (isFirstMessage && Array.isArray(gsc_data) && gsc_data.length > 0) {
-      content = `User data (remember and use these throughout this conversation):
-${gsc_data.join(", ")}
+RULES:
+1. Answer ONLY using the information provided in DATA.
+2. Do NOT use general knowledge or assumptions.
+3. Summarize information clearly if multiple pages are relevant.
+4. If medicines are mentioned:
+   - Do NOT diagnose
+   - Advise consulting a doctor if symptoms persist
+5. Include URLs when helpful.
+6. Be concise, clear, and user-friendly.
+`;
+
+    /* =======================
+       🧾 BUILD MESSAGE CONTENT
+    ======================= */
+    const content = `
+${systemPrompt}
+
+${Array.isArray(overalldata) && overalldata.length > 0
+  ? `DATA:\n${JSON.stringify(data, null, 2)}\n`
+  : ""}
 
 User message:
-${message}`;
-    }
+${message}
+`;
 
+    /* =======================
+       📝 SAVE USER QUESTION
+    ======================= */
     const row = await ChatHistory.create({
       user_id,
       chat_id: chatId,
@@ -1218,6 +1258,9 @@ ${message}`;
       question: message,
     });
 
+    /* =======================
+       📤 SEND TO OPENAI
+    ======================= */
     await openaiClient.beta.threads.messages.create(THREAD_ID, {
       role: "user",
       content,
@@ -1237,11 +1280,15 @@ ${message}`;
 
     await row.update({ answer: reply });
 
+    /* =======================
+       ✅ FINAL RESPONSE
+    ======================= */
     return res.json({
       success: true,
       chat_id: chatId,
       reply,
     });
+
   } catch (error) {
     console.error("ERROR", error);
     return res.status(500).json({
@@ -1250,6 +1297,225 @@ ${message}`;
     });
   }
 };
+// with prompt + sending overall dat aof gsc ,ga n web with each msg 
+// exports.chatbotdata = async (req, res) => {
+//   try {
+//     const { message, chat_id, overalldata } = req.body;
+
+//     /* =======================
+//        ✅ BASIC VALIDATION
+//     ======================= */
+//     if (!message || typeof message !== "string") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Message required",
+//       });
+//     }
+
+//     const user_id = req.user.id;
+//     const chatId = chat_id || crypto.randomUUID();
+
+//     /* =======================
+//        🔎 GET DOMAIN FROM BRAND
+//     ======================= */
+//     const brand = await Brand.findOne({
+//       where: { user_id },
+//       attributes: ["domain"],
+//     });
+
+//     if (!brand) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Brand not found for user",
+//       });
+//     }
+
+//     const siteName = brand.domain;
+
+//     /* =======================
+//        💬 THREAD LOGIC (KEEP THIS)
+//     ======================= */
+//     const previousCount = await ChatHistory.count({
+//       where: { chat_id: chatId, user_id },
+//     });
+
+//     let THREAD_ID;
+
+//     if (previousCount === 0) {
+//       const thread = await openaiClient.beta.threads.create();
+//       THREAD_ID = thread.id;
+//     } else {
+//       const lastRow = await ChatHistory.findOne({
+//         where: { chat_id: chatId, user_id },
+//         order: [["createdAt", "DESC"]],
+//       });
+//       THREAD_ID = lastRow.thread_id;
+//     }
+
+//     /* =======================
+//        🧠 SYSTEM PROMPT (ALWAYS)
+//     ======================= */
+//     const systemPrompt = `
+// You are an AI assistant for the website: ${siteName}.
+
+// RULES:
+// 1. Answer ONLY using the information provided in DATA.
+// 2. Do NOT use general knowledge or assumptions.
+// 3. Summarize information clearly if multiple pages are relevant.
+// 4. If medicines are mentioned:
+//    - Do NOT diagnose
+//    - Advise consulting a doctor if symptoms persist
+// 5. Include URLs when helpful.
+// 6. Be concise, clear, and user-friendly.
+// `;
+
+//     /* =======================
+//        🧾 BUILD MESSAGE CONTENT
+//        (NO FIRST-MESSAGE LOGIC)
+//     ======================= */
+//     const content = `
+// ${systemPrompt}
+
+// DATA:
+// ${JSON.stringify(overalldata || [], null, 2)}
+
+// User message:
+// ${message}
+// `;
+
+//     /* =======================
+//        📝 SAVE USER QUESTION
+//     ======================= */
+//     const row = await ChatHistory.create({
+//       user_id,
+//       chat_id: chatId,
+//       thread_id: THREAD_ID,
+//       question: message,
+//     });
+
+//     /* =======================
+//        📤 SEND TO OPENAI
+//     ======================= */
+//     await openaiClient.beta.threads.messages.create(THREAD_ID, {
+//       role: "user",
+//       content,
+//     });
+
+//     const run = await openaiClient.beta.threads.runs.createAndPoll(THREAD_ID, {
+//       assistant_id: GLOBAL_ASSISTANT_ID,
+//     });
+
+//     if (run.status !== "completed") {
+//       throw new Error(`Run failed: ${run.status}`);
+//     }
+
+//     const messages = await openaiClient.beta.threads.messages.list(THREAD_ID);
+//     const reply =
+//       messages.data?.[0]?.content?.[0]?.text?.value ??
+//       "No response generated";
+
+//     await row.update({ answer: reply });
+
+//     /* =======================
+//        ✅ FINAL RESPONSE
+//     ======================= */
+//     return res.json({
+//       success: true,
+//       chat_id: chatId,
+//       reply,
+//     });
+//   } catch (error) {
+//     console.error("❌ CHATBOT ERROR:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+//without propt to responce 
+// exports.chatbotdata = async (req, res) => {
+//   try {
+//     const { message, chat_id, gsc_data } = req.body;
+
+//     if (!message || typeof message !== "string") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Message required",
+//       });
+//     }
+
+//     const user_id = req.user.id;
+//     const chatId = chat_id || crypto.randomUUID();
+
+//     const previousCount = await ChatHistory.count({
+//       where: { chat_id: chatId, user_id },
+//     });
+
+//     const isFirstMessage = previousCount === 0;
+
+//     let THREAD_ID;
+
+//     if (isFirstMessage) {
+//       const thread = await openaiClient.beta.threads.create();
+//       THREAD_ID = thread.id;
+//     } else {
+//       const lastRow = await ChatHistory.findOne({
+//         where: { chat_id: chatId, user_id },
+//         order: [["createdAt", "DESC"]],
+//       });
+//       THREAD_ID = lastRow.thread_id;
+//       console.log("REUSING THREAD:", THREAD_ID);
+//     }
+
+//     let content = message;
+
+//     if (isFirstMessage && Array.isArray(gsc_data) && gsc_data.length > 0) {
+//       content = `User data (remember and use these throughout this conversation):
+// ${gsc_data.join(", ")}
+
+// User message:
+// ${message}`;
+//     }
+
+//     const row = await ChatHistory.create({
+//       user_id,
+//       chat_id: chatId,
+//       thread_id: THREAD_ID,
+//       question: message,
+//     });
+
+//     await openaiClient.beta.threads.messages.create(THREAD_ID, {
+//       role: "user",
+//       content,
+//     });
+
+//     const run = await openaiClient.beta.threads.runs.createAndPoll(THREAD_ID, {
+//       assistant_id: GLOBAL_ASSISTANT_ID,
+//     });
+
+//     if (run.status !== "completed") {
+//       throw new Error(`Run failed: ${run.status}`);
+//     }
+
+//     const messages = await openaiClient.beta.threads.messages.list(THREAD_ID);
+//     const reply =
+//       messages.data?.[0]?.content?.[0]?.text?.value ?? "No response generated";
+
+//     await row.update({ answer: reply });
+
+//     return res.json({
+//       success: true,
+//       chat_id: chatId,
+//       reply,
+//     });
+//   } catch (error) {
+//     console.error("ERROR", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 exports.getChatHistory = async (req, res) => {
   try {
     const userId = req.user.id;
