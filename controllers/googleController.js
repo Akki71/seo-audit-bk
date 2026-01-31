@@ -1,8 +1,8 @@
 const axios = require("axios");
-const { Brand ,BrandGbpData,Prompt,VisibilityLog} = require("../models");
+const { Brand, BrandGbpData, Prompt, VisibilityLog } = require("../models");
 const { google } = require("googleapis");
-const GscSnapshot =require("../models/GscSnapshot");
-const GaSnapshot =require("../models/GaSnapshot");
+const GscSnapshot = require("../models/GscSnapshot");
+const GaSnapshot = require("../models/GaSnapshot");
 
 const { refreshGoogleAccessToken } = require("../utils/googleAuth");
 const { OAuth2Client } = require("google-auth-library");
@@ -14,9 +14,7 @@ const ChatHistory = require("../models/ChatHistory");
 const Webpage = require("../models/Webpage");
 const User = require("../models/User");
 const { collectAndStoreGSCDataForBrand } = require("../services/gscService");
-const {
-  collectAndStoreGADataForBrand,
-} = require("../services/gaService");
+const { collectAndStoreGADataForBrand } = require("../services/gaService");
 
 const nodemailer = require("nodemailer");
 // const { sequelize } = require("../models");
@@ -41,7 +39,7 @@ const GLOBAL_ASSISTANT_ID = process.env.GLOBAL_ASSISTANT_ID;
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,
-  process.env.GBP_REDIRECT_URI
+  process.env.GBP_REDIRECT_URI,
 );
 exports.getGoogleTokens = async (req, res) => {
   try {
@@ -72,13 +70,13 @@ exports.getGoogleTokens = async (req, res) => {
       //     ? process.env.GA_REDIRECT_URI
       //     : process.env.GSC_REDIRECT_URI,
       // grant_type: "authorization_code",
-       redirect_uri:
-    account === "ga"
-      ? process.env.GA_REDIRECT_URI
-      : account === "gsc"
-      ? process.env.GSC_REDIRECT_URI
-      : process.env.GBP_REDIRECT_URI,
-  grant_type: "authorization_code",
+      redirect_uri:
+        account === "ga"
+          ? process.env.GA_REDIRECT_URI
+          : account === "gsc"
+            ? process.env.GSC_REDIRECT_URI
+            : process.env.GBP_REDIRECT_URI,
+      grant_type: "authorization_code",
     });
 
     const { data } = await axios.post(
@@ -86,17 +84,16 @@ exports.getGoogleTokens = async (req, res) => {
       params.toString(),
       {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      }
+      },
     );
 
     if (account === "ga") {
       brand.ga_refresh_token = data.refresh_token;
     } else if (account === "gsc") {
       brand.gsc_refresh_token = data.refresh_token;
-    }else if (account === "gbp") {
-  brand.gbp_refresh_token = data.refresh_token;
-}
-
+    } else if (account === "gbp") {
+      brand.gbp_refresh_token = data.refresh_token;
+    }
 
     await brand.save();
 
@@ -387,14 +384,14 @@ exports.refreshGoogleAccessToken = async (req, res) => {
       params.toString(),
       {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      }
+      },
     );
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error(
       "Refresh token error:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
     );
     return res.status(500).json({
       success: false,
@@ -533,7 +530,7 @@ exports.getGSCData = async (req, res) => {
     const siteUrl = brand.site_url;
 
     const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-      siteUrl
+      siteUrl,
     )}/searchAnalytics/query`;
 
     // ---------- FIXED fetchApi ----------
@@ -725,7 +722,7 @@ exports.getTrendingKeywords = async (req, res) => {
 
     const fetchApi = async (body) => {
       const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-        siteUrl
+        siteUrl,
       )}/searchAnalytics/query`;
 
       const { data } = await axios.post(url, body, {
@@ -773,15 +770,15 @@ exports.getTrendingKeywords = async (req, res) => {
         prev.clicks > 0
           ? ((clickDiff / prev.clicks) * 100).toFixed(1)
           : current.clicks > 0
-          ? "100"
-          : "0";
+            ? "100"
+            : "0";
 
       const growthPercentImpression =
         prev.impressions > 0
           ? ((impDiff / prev.impressions) * 100).toFixed(1)
           : current.impressions > 0
-          ? "100"
-          : "0";
+            ? "100"
+            : "0";
 
       const item = {
         keyword,
@@ -847,7 +844,7 @@ exports.getUrls = async (req, res) => {
     const siteUrl = brand.site_url;
 
     const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-      siteUrl
+      siteUrl,
     )}/searchAnalytics/query`;
 
     // ---------- FIXED fetchApi ----------
@@ -915,7 +912,7 @@ exports.getPageData = async (req, res) => {
     const siteUrl = brand.site_url;
 
     const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-      siteUrl
+      siteUrl,
     )}/searchAnalytics/query`;
 
     const fetchApi = async (body) => {
@@ -958,7 +955,7 @@ exports.getPageData = async (req, res) => {
             headers: {
               Authorization: `Bearer ${access_token}`,
             },
-          }
+          },
         );
 
         const result = response.data.inspectionResult;
@@ -1165,7 +1162,7 @@ exports.getSectionWiseSummary = async (req, res) => {
     });
   }
 };
-// with propt 
+// with propt
 exports.chatbotdata = async (req, res) => {
   try {
     const { message, chat_id, overalldata } = req.body;
@@ -1240,9 +1237,11 @@ RULES:
     const content = `
 ${systemPrompt}
 
-${Array.isArray(overalldata) && overalldata.length > 0
-  ? `DATA:\n${JSON.stringify(data, null, 2)}\n`
-  : ""}
+${
+  Array.isArray(overalldata) && overalldata.length > 0
+    ? `DATA:\n${JSON.stringify(data, null, 2)}\n`
+    : ""
+}
 
 User message:
 ${message}
@@ -1288,7 +1287,6 @@ ${message}
       chat_id: chatId,
       reply,
     });
-
   } catch (error) {
     console.error("ERROR", error);
     return res.status(500).json({
@@ -1297,7 +1295,7 @@ ${message}
     });
   }
 };
-// with prompt + sending overall dat aof gsc ,ga n web with each msg 
+// with prompt + sending overall dat aof gsc ,ga n web with each msg
 // exports.chatbotdata = async (req, res) => {
 //   try {
 //     const { message, chat_id, overalldata } = req.body;
@@ -1432,7 +1430,7 @@ ${message}
 //     });
 //   }
 // };
-//without propt to responce 
+//without propt to responce
 // exports.chatbotdata = async (req, res) => {
 //   try {
 //     const { message, chat_id, gsc_data } = req.body;
@@ -1562,7 +1560,7 @@ exports.deleteChat = async (req, res) => {
           user_id: userId,
           is_deleted: false,
         },
-      }
+      },
     );
 
     if (updatedCount === 0) {
@@ -1640,9 +1638,8 @@ exports.collectAndStoreGAData = async (req, res) => {
   }
 };
 
-
 //date_wise
-exports.getGSCDataFromDB = async (req, res) => {
+exports.getGSCGaWebDataFromDB = async (req, res) => {
   try {
     /* =======================
        🔐 BRAND CHECK
@@ -1667,7 +1664,7 @@ exports.getGSCDataFromDB = async (req, res) => {
     });
 
     const gscData = gscSnapshots.length
-      ? gscSnapshots.flatMap(row => row.gsc_data)
+      ? gscSnapshots.flatMap((row) => row.gsc_data)
       : [];
 
     /* =======================
@@ -1679,7 +1676,7 @@ exports.getGSCDataFromDB = async (req, res) => {
     });
 
     const gaData = gaSnapshots.length
-      ? gaSnapshots.flatMap(row => row.ga_data)
+      ? gaSnapshots.flatMap((row) => row.ga_data)
       : [];
 
     /* =======================
@@ -1687,8 +1684,10 @@ exports.getGSCDataFromDB = async (req, res) => {
     ======================= */
     const webpages = await Webpage.findAll({
       where: {
-        domainId: "3", // 👈 string, matches model
+        user_id: req.user.id,
+        domainId: String(brand.id), 
       },
+
       attributes: [
         "date",
         "url",
@@ -1698,12 +1697,13 @@ exports.getGSCDataFromDB = async (req, res) => {
         "canonical",
         "h1",
         "h2",
+        "domainId",
       ],
       order: [["date", "ASC"]],
     });
 
     const webpagesData = webpages.length
-      ? webpages.map(page => ({
+      ? webpages.map((page) => ({
           date: page.date,
           url: page.url,
           title: page.title,
@@ -1737,12 +1737,11 @@ exports.getGSCDataFromDB = async (req, res) => {
       success: true,
       message: "hey",
       data: {
-        gsc: gscData,           // ✅ ARRAY
-        ga: gaData,             // ✅ ARRAY
-        webpages: webpagesData // ✅ ARRAY
+        gsc: gscData, // ✅ ARRAY
+        ga: gaData, // ✅ ARRAY
+        webpages: webpagesData, // ✅ ARRAY
       },
     });
-
   } catch (error) {
     console.error("getAnalyticsDataFromDB error:", error);
     return res.status(500).json({
@@ -1751,7 +1750,6 @@ exports.getGSCDataFromDB = async (req, res) => {
     });
   }
 };
-
 
 // exports.getGSCDataFromDB = async (req, res) => {
 //   try {
@@ -2351,7 +2349,6 @@ exports.handleGBPOAuthCallback = async (req, res) => {
   }
 };
 
-
 exports.getGBPAccounts = async (req, res) => {
   console.log("🔵 GBP: getGBPAccounts API called");
 
@@ -2389,8 +2386,7 @@ exports.getGBPAccounts = async (req, res) => {
     if (
       gbp.gbp_accounts &&
       gbp.gbp_accounts_synced_at &&
-      Date.now() - gbp.gbp_accounts_synced_at.getTime() <
-        24 * 60 * 60 * 1000
+      Date.now() - gbp.gbp_accounts_synced_at.getTime() < 24 * 60 * 60 * 1000
     ) {
       return res.json({
         success: true,
@@ -2418,9 +2414,7 @@ exports.getGBPAccounts = async (req, res) => {
     /* ===========================
        4️⃣ REFRESH TOKEN
     =========================== */
-    const tokenData = await refreshGoogleAccessToken(
-      brand.gbp_refresh_token
-    );
+    const tokenData = await refreshGoogleAccessToken(brand.gbp_refresh_token);
 
     const access_token = tokenData.access_token;
     if (!access_token) throw new Error("Access token missing");
@@ -2433,7 +2427,7 @@ exports.getGBPAccounts = async (req, res) => {
       {
         headers: { Authorization: `Bearer ${access_token}` },
         timeout: 10000,
-      }
+      },
     );
 
     /* ===========================
@@ -2450,7 +2444,6 @@ exports.getGBPAccounts = async (req, res) => {
       source: "google",
       accounts: data.accounts || [],
     });
-
   } catch (err) {
     console.error("🔥 GBP ERROR:", err.response?.data || err.message);
 
@@ -2472,8 +2465,6 @@ exports.getGBPAccounts = async (req, res) => {
     });
   }
 };
-
-
 
 exports.selectGBPAccount = async (req, res) => {
   const { account_name } = req.body;
@@ -2506,18 +2497,26 @@ exports.getGBPLocations = async (req, res) => {
   const gbp = await BrandGbpData.findOne({ where: { brand_id: brand.id } });
 
   if (!gbp?.gbp_account_name) {
-    return res.status(400).json({ success: false, message: "Account not selected" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Account not selected" });
   }
 
   if (gbp.gbp_location_id) {
-    return res.json({ success: true, source: "db", location_id: gbp.gbp_location_id });
+    return res.json({
+      success: true,
+      source: "db",
+      location_id: gbp.gbp_location_id,
+    });
   }
 
-  const { access_token } = await refreshGoogleAccessToken(brand.gbp_refresh_token);
+  const { access_token } = await refreshGoogleAccessToken(
+    brand.gbp_refresh_token,
+  );
 
   const { data } = await axios.get(
     `https://mybusinessbusinessinformation.googleapis.com/v1/${gbp.gbp_account_name}/locations`,
-    { headers: { Authorization: `Bearer ${access_token}` } }
+    { headers: { Authorization: `Bearer ${access_token}` } },
   );
 
   const location = data.locations?.[0]?.name || null;
@@ -2542,7 +2541,9 @@ exports.refreshGBPInsights = async (req, res) => {
   const gbp = await BrandGbpData.findOne({ where: { brand_id: brand.id } });
 
   if (!gbp?.gbp_location_id) {
-    return res.status(400).json({ success: false, message: "Location not selected" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Location not selected" });
   }
 
   // ⛔ Allow refresh only once per 24 hours
@@ -2556,7 +2557,9 @@ exports.refreshGBPInsights = async (req, res) => {
     });
   }
 
-  const { access_token } = await refreshGoogleAccessToken(brand.gbp_refresh_token);
+  const { access_token } = await refreshGoogleAccessToken(
+    brand.gbp_refresh_token,
+  );
 
   const body = {
     dailyMetrics: [
@@ -2574,7 +2577,7 @@ exports.refreshGBPInsights = async (req, res) => {
   const { data } = await axios.post(
     `https://businessprofileperformance.googleapis.com/v1/${gbp.gbp_location_id}:fetchMultiDailyMetricsTimeSeries`,
     body,
-    { headers: { Authorization: `Bearer ${access_token}` } }
+    { headers: { Authorization: `Bearer ${access_token}` } },
   );
 
   await gbp.update({
@@ -2585,12 +2588,11 @@ exports.refreshGBPInsights = async (req, res) => {
   res.json({ success: true, source: "google", data });
 };
 
-
 //limit excied mail
 const transporterr = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,       
+  host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_PORT == "465", 
+  secure: process.env.SMTP_PORT == "465",
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -2628,7 +2630,6 @@ exports.gemailtrigger = async (req, res) => {
       success: true,
       message: `${agent} limit email sent via SMTP`,
     });
-
   } catch (error) {
     console.error(" SMTP email error:", error);
 
@@ -2638,7 +2639,6 @@ exports.gemailtrigger = async (req, res) => {
     });
   }
 };
-
 
 //n8n aksy enail
 
@@ -2654,11 +2654,11 @@ const transporter = nodemailer.createTransport({
 
 exports.gemailtriggervisibility = async (req, res) => {
   const dbInfo = await sequelize.query(
-  `SELECT current_database() AS db, inet_server_addr() AS host`,
-  { type: QueryTypes.SELECT }
-);
+    `SELECT current_database() AS db, inet_server_addr() AS host`,
+    { type: QueryTypes.SELECT },
+  );
 
-console.log("🧪 CONNECTED DB INFO:", dbInfo);
+  console.log("🧪 CONNECTED DB INFO:", dbInfo);
   try {
     console.log("📩 Visibility email trigger started");
 
@@ -2724,7 +2724,7 @@ console.log("🧪 CONNECTED DB INFO:", dbInfo);
       {
         replacements: { userId },
         type: QueryTypes.SELECT,
-      }
+      },
     );
 
     console.log("📊 Raw rows count:", rows.length);
@@ -2774,7 +2774,7 @@ console.log("🧪 CONNECTED DB INFO:", dbInfo);
     }
 
     const drops = Object.values(map).filter(
-      d => d.yesterday === true && d.today === false
+      (d) => d.yesterday === true && d.today === false,
     );
 
     console.log("🚨 Drops detected:", drops.length);
@@ -2800,7 +2800,9 @@ console.log("🧪 CONNECTED DB INFO:", dbInfo);
     const toEmail = drops[0].email;
     const username = drops[0].username || "";
 
-    const blocks = drops.map(d => `
+    const blocks = drops
+      .map(
+        (d) => `
       <div style="margin-bottom:16px; padding:12px; border-left:4px solid #dc2626; background:#fef2f2;">
         <p><b>Prompt:</b> ${d.prompt_title}</p>
         <p><b>Platform:</b> ${d.platform}</p>
@@ -2808,7 +2810,9 @@ console.log("🧪 CONNECTED DB INFO:", dbInfo);
           <b>Status:</b> ❌ Mention DROPPED (Yesterday → Today)
         </p>
       </div>
-    `).join("");
+    `,
+      )
+      .join("");
 
     const html = `
       <p>Hi ${username},</p>
@@ -2861,7 +2865,6 @@ console.log("🧪 CONNECTED DB INFO:", dbInfo);
       brand: brandName,
       drops: drops.length,
     });
-
   } catch (error) {
     console.error("❌ Visibility Email Error:", error);
     return res.status(500).json({

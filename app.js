@@ -30,7 +30,7 @@ app.use('/api', auditRoutes);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use("/api/google",googleRoutes );
+app.use('/api/google',googleRoutes );
 
 app.use((err, req, res, next) => {
     console.error(err.stack);

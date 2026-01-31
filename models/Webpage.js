@@ -1,7 +1,7 @@
-const { DataTypes } = require('sequelize');
-const {sequelize} = require('../config/database');
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/database");
 
-const Webpage = sequelize.define('webpage', {
+const Webpage = sequelize.define("webpage", {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -11,42 +11,46 @@ const Webpage = sequelize.define('webpage', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-date: {
-  type: DataTypes.DATE,
-  allowNull: true
-},
-  url:{
+  date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  url: {
     type: DataTypes.TEXT,
-    allowNull:true,
+    allowNull: true,
   },
-    title:{
+  title: {
     type: DataTypes.TEXT,
-    allowNull:true,
+    allowNull: true,
   },
-      meta_description:{
+  meta_description: {
     type: DataTypes.TEXT,
-    allowNull:true,
+    allowNull: true,
   },
-        body_text:{
+  body_text: {
     type: DataTypes.TEXT,
-    allowNull:true,
+    allowNull: true,
   },
-          canonical:{
+  canonical: {
     type: DataTypes.TEXT,
-    allowNull:true,
+    allowNull: true,
   },
-  h1:{
-        type: DataTypes.JSONB,
-    allowNull:true,
+  h1: {
+    type: DataTypes.JSONB,
+    allowNull: true,
   },
-    h2:{
-        type: DataTypes.JSONB,
-    allowNull:true,
+  h2: {
+    type: DataTypes.JSONB,
+    allowNull: true,
   },
   embedding: {
     type: DataTypes.ARRAY(DataTypes.FLOAT),
     allowNull: true,
-  }
+  },
+  user_id: {
+    type: DataTypes.BIGINT,
+    allowNull: false,
+  },
 });
 
 module.exports = Webpage;

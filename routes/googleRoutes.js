@@ -13,7 +13,7 @@ const {
   getGSCData,
   getTrendingKeywords,
   collectAndStoreGSCData,
-  getGSCDataFromDB,
+  getGSCGaWebDataFromDB,
   // gemailtrigger,
   // gemailtriggervisibility,
   startGBPOAuth,
@@ -65,7 +65,7 @@ router.post(
   authenticateToken,
   collectAndStoreGSCData,
 );
-router.get("/search-console/get-gsc-ga-web-db", authenticateToken, getGSCDataFromDB);
+router.get("/search-console/get-gsc-ga-web-db", authenticateToken, getGSCGaWebDataFromDB);
 // router.get("/search-console/gemailtrigger", authenticateToken, gemailtrigger);
 
 // router.get(

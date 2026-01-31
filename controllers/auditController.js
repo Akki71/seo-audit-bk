@@ -13,508 +13,510 @@ const axios = require("axios");
 const { JSDOM } = require("jsdom");
 const Webpage = require("../models/Webpage");
 const Domain = require("../models/AuditDomain");
+const Brand = require("../models/Brand");
+
 const Urls = require("../models/Urls");
-const { getGASeoData, getGSCSeoData, getGSCDataAndSEOOverview } = require("../middlewares/google");
+const {
+  getGASeoData,
+  getGSCSeoData,
+  getGSCDataAndSEOOverview,
+} = require("../middlewares/google");
 const { analyzeSeoIssues } = require("../middlewares/seoIssueAnalyzer");
 const { calculateScores } = require("../middlewares/seoScoreCalculator");
 const zlib = require("zlib");
 const getDomainAuthority = require("../utils/getDomainAuthority");
 
-    const finalAuditJson = {
-        "totals": {
-            "pages": 10,
-            "missing_title": 0,
-            "missing_meta": 0,
-            "missing_h1": 0,
-            "recommendations_count": 0,
-            "images_missing_alt": 89,
-            "broken_links": 0
-        },
-        "overview": {
-            "seo_grade": "A+",
-            "recommendations_count": 0,
-            "summary_text": "Excellent SEO health. Your website is highly optimized and follows best practices. Maintain consistency and monitor performance regularly."
-        },
-        "technical_fixes": {
-            "schema_codes_found": true,
-            "schema_note": "10 pages contain structured data markup",
-            "sitemap_present": true,
-            "sitemap_url": "https://gulfpharmacy.com/sitemap.xml",
-            "robots_txt_present": true,
-            "sitemap_and_robots_note": null
-        },
-        "ssl_security": {
-            "https_supported": true,
-            "certificate_valid": true,
-            "trusted": true,
-            "final_url": "https://gulfpharmacy.com/",
-            "note": "SSL is properly configured. Secure HTTPS improves user trust, protects data transmission, and is a confirmed Google ranking factor.",
-            "page": 17
-        },
-        "title_optimization": {
-            "duplicate_count": 0,
-            "titles_below_30": 0,
-            "titles_over_60": 9,
-            "max_title_length": 100,
-            "max_length_title": "Gulf Pharmacy Dubai | Get Up To 70% Off + Free Delivery On Pharmacy & Wellness Products Across Dubai"
-        },
-        "header_optimization": {
-            "h1": {
-                "missing": 0,
-                "duplicate": 0,
-                "multiple": 0,
-                "over_70_characters": 0
-            },
-            "h2": {
-                "missing": 0,
-                "duplicate": 0,
-                "multiple": 10,
-                "over_70_characters": 0
-            },
-            "note": "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings."
-        },
-        "meta_description_optimization": {
-            "missing_descriptions_count": 0,
-            "note": "Optimize meta descriptions using targeted keywords to improve click-through rate."
-        },
-        "url_optimization": {
-            "issues_list": [],
-            "page": 11
-        },
-        "image_optimization": {
-            "images_over_100kb": null,
-            "missing_size_attributes": 164,
-            "missing_alt_text_count": 89,
-            "image_metadata_note": "Images should be optimized with descriptive alt text and appropriate sizing.",
-            "page": 10
-        },
-        "overview_scores": {
-            "on_page": "A+",
-            "links": "F",
-            "usability": "A",
-            "performance": "F",
-            "social": "C",
-            "page": 2
-        },
-        "security": {
-            "ssl_enabled": true
-        },
-        "page_speed": {
-            "mobile": {
-                "performance_score": 13,
-                "fcp": 8586.558555036077,
-                "lcp": 26863.751283181573,
-                "cls": 0.7304616074272434,
-                "tbt": 776.5,
-                "ttfb": 269,
-                "speed_index": 16416.27197206219
-            },
-            "desktop": {
-                "performance_score": 10,
-                "fcp": 2144.695927048868,
-                "lcp": 4539.520772073192,
-                "cls": 0.8892004752067574,
-                "tbt": 731.9999999999995,
-                "ttfb": 332,
-                "speed_index": 6274.524352376229
-            }
-        },
-        "domain_analysis": {
-            "authority_score": null,
-            "organic_traffic": 6862,
-            "paid_traffic": 0,
-            "referring_domains": 0,
-            "backlinks": 0,
-            "organic_keywords": 10,
-            "traffic_share": 0
-        },
-        "backlink_profile": {
-            "total_backlinks": 0,
-            "referring_domains": 0,
-            "distribution": {
-                "text": 0,
-                "image": 0,
-                "form": 0,
-                "frame": 0
-            }
-        },
-        "redirects": {
-            "total_redirects": 0,
-            "redirect_urls": [],
-            "note": "No redirect issues detected. All URLs resolve directly without unnecessary redirects.",
-            "page": 9
-        },
-        "security_checks": {
-            "https_enabled": true,
-            "certificate_valid": true,
-            "not_expired": true,
-            "trusted": true,
-            "secure_hash": true
-        },
-        "schema_validation": {
-            "total_pages_with_schema": 10,
-            "pages_missing_schema": 0,
-            "rich_results_detected": true
-        },
-        "social_links": {
-            "facebook": [
-                "https://www.facebook.com/GulfPharmacy1/"
-            ],
-            "instagram": [
-                "https://www.instagram.com/gulfpharmacydubai"
-            ],
-            "twitter": [
-                "https://x.com/GulfPharmacy"
-            ],
-            "linkedin": [
-                "https://www.linkedin.com/company/gulf-pharmacy/?originalSubdomain=ae"
-            ],
-            "youtube": []
-        },
-        "trending_keywords": {
-            "rows": [
-                {
-                    "name": "gulf pharmacy",
-                    "clicks": 573,
-                    "impressions": 5603,
-                    "avgPosition": 0,
-                    "ctr": 10.23,
-                    "percent": "8.4"
-                },
-                {
-                    "name": "panadol cold and flu",
-                    "clicks": 257,
-                    "impressions": 94377,
-                    "avgPosition": 0,
-                    "ctr": 0.27,
-                    "percent": "3.7"
-                },
-                {
-                    "name": "gulf pharmacy dubai",
-                    "clicks": 96,
-                    "impressions": 537,
-                    "avgPosition": 0,
-                    "ctr": 17.88,
-                    "percent": "1.4"
-                },
-                {
-                    "name": "microsynergy pharmaceuticals fzco",
-                    "clicks": 51,
-                    "impressions": 1606,
-                    "avgPosition": 0,
-                    "ctr": 3.18,
-                    "percent": "0.7"
-                },
-                {
-                    "name": "daktarin cream",
-                    "clicks": 34,
-                    "impressions": 1968,
-                    "avgPosition": 0,
-                    "ctr": 1.73,
-                    "percent": "0.5"
-                },
-                {
-                    "name": "salibet ointment",
-                    "clicks": 25,
-                    "impressions": 3318,
-                    "avgPosition": 0,
-                    "ctr": 0.75,
-                    "percent": "0.4"
-                },
-                {
-                    "name": "gulfpharmacy",
-                    "clicks": 23,
-                    "impressions": 85,
-                    "avgPosition": 0,
-                    "ctr": 27.06,
-                    "percent": "0.3"
-                },
-                {
-                    "name": "fresubin 2kcal",
-                    "clicks": 22,
-                    "impressions": 689,
-                    "avgPosition": 0,
-                    "ctr": 3.19,
-                    "percent": "0.3"
-                },
-                {
-                    "name": "alkacure",
-                    "clicks": 21,
-                    "impressions": 1227,
-                    "avgPosition": 0,
-                    "ctr": 1.71,
-                    "percent": "0.3"
-                },
-                {
-                    "name": "annora pharma fz-llc",
-                    "clicks": 21,
-                    "impressions": 291,
-                    "avgPosition": 0,
-                    "ctr": 7.22,
-                    "percent": "0.3"
-                }
-            ]
-        },
-        "trending_urls": {
-            "rows": [
-                {
-                    "url": "https://gulfpharmacy.com/",
-                    "impressions": 89389,
-                    "clicks": 1378,
-                    "percent": "7.9"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/over-the-counter-medicines/p/panadol-cold-flu-night-tablets-pack-of-24",
-                    "impressions": 147120,
-                    "clicks": 383,
-                    "percent": "13.0"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/mother-and-baby/p/salibet-reduce-skin-allergy-ointment-30-g",
-                    "impressions": 29369,
-                    "clicks": 194,
-                    "percent": "2.6"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/brand/annora-pharma-fz-llc",
-                    "impressions": 4341,
-                    "clicks": 164,
-                    "percent": "0.4"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/over-the-counter-medicines/p/daktarin-cream-30g",
-                    "impressions": 8330,
-                    "clicks": 109,
-                    "percent": "0.7"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/brand/microsynergy-pharmaceuticals-fzco",
-                    "impressions": 3397,
-                    "clicks": 104,
-                    "percent": "0.3"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/otc-medicines-kids/p/zentel-oral-suspension-20-ml",
-                    "impressions": 12393,
-                    "clicks": 91,
-                    "percent": "1.1"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/nutrition-supplements/p/fresubin-2kcal-drink-vanilla-200ml",
-                    "impressions": 2495,
-                    "clicks": 85,
-                    "percent": "0.2"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/c/otc-medicines-kids/s/deworming",
-                    "impressions": 6644,
-                    "clicks": 76,
-                    "percent": "0.6"
-                },
-                {
-                    "url": "https://gulfpharmacy.com/contact-us",
-                    "impressions": 30936,
-                    "clicks": 71,
-                    "percent": "2.7"
-                }
-            ]
-        },
-        "google_analytics": {
-            "google_analytics_found": true,
-            "summary": {
-                "sessions": 15387,
-                "pageviews": 20733,
-                "avg_session_duration_minutes": 1.15,
-                "bounce_rate_percent": 47.87,
-                "conversion_rate_percent": 0.2,
-                "total_conversions": 33
-            }
-        },
-        "google_search_console": {
-            "google_search_console_found": true,
-            "summary": {
-                "clicks": 6862,
-                "impressions": 1129631,
-                "ctr": 0.61,
-                "avg_position": 10.689431327575111
-            }
-        },
-        "ga_present": true,
-        "gsc_present": true,
-        "googleServicesFromPages": {
-            "google_analytics": false,
-            "google_search_console": true,
-            "google_my_business": false
-        },
-        "document_title": "https://gulfpharmacy.com/",
-        "basic_setup": {
-            "google_analytics_found": true,
-            "google_search_console_found": true,
-            "google_search_console_note": "GSC data available for analysis",
-            "google_my_business_found": false,
-            "page": 3
-        },
-        "broken_links": {
-            "contains_broken_links": false,
-            "rows": [],
-            "page": 12
-        },
-        "top_priority_action_plan": {
-            "week_1_technical": [
-                "Submit sitemap.xml in Google Search Console and validate index coverage.",
-                "Ensure all pages are served over HTTPS to improve security.",
-                "Check and optimize page speed to improve user experience.",
-                "Validate structured data markup on all pages.",
-                "Review and fix any potential crawlability issues."
-            ],
-            "week_2_on_page": [
-                "Optimize titles over 60 characters for better search visibility.",
-                "Ensure all images have descriptive alt text.",
-                "Review and improve meta descriptions to enhance CTR.",
-                "Check for any missing or duplicate H1 tags.",
-                "Enhance URL readability for better user experience."
-            ],
-            "week_3_content_internal_links": [
-                "Identify and expand content on pages with low impressions.",
-                "Add internal links from high-traffic pages to underperforming pages.",
-                "Optimize anchor text for better keyword relevance.",
-                "Review top-performing pages and scale content strategies.",
-                "Strengthen thin content to improve engagement."
-            ],
-            "week_4_measurement": [
-                "Configure GA conversion tracking for primary lead form.",
-                "Monitor GSC indexing and validate any issues.",
-                "Set up performance monitoring dashboards.",
-                "Track ranking changes for targeted keywords.",
-                "Benchmark monthly performance metrics for growth analysis."
-            ],
-            "page": 14
-        },
-        "graph_data": {
-            "seo_health_score": 0,
-            "seo_health_breakdown": {
-                "on_page": 0,
-                "content": 0,
-                "internal_links": 0,
-                "technical": 0
-            },
-            "seo_performance_score": 0,
-            "performance_metrics": {
-                "impressions": 1129631,
-                "clicks": 6862,
-                "ctr": 0.61,
-                "avg_position": 10.689431327575111
-            },
-            "page": 15
-        },
-        "voice_search": {
-            "faq_present": false,
-            "optimized": false,
-            "page": 30
-        },
-        "mobile_usability": {
-            "viewport_ok": true,
-            "tap_targets_ok": true,
-            "responsive": true,
-            "page": 31
-        },
-        "competitors": [
-            {
-                "name": "Competitor A",
-                "traffic": 1200,
-                "backlinks": 340
-            },
-            {
-                "name": "Competitor B",
-                "traffic": 890,
-                "backlinks": 210
-            }
-        ],
-        "llm_visibility": {
-            "entity_ready": false,
-            "schema_ready": false,
-            "brand_mentions": 0,
-            "page": 34
-        },
-        "keyword_strategy": [
-            "Focus on 'gulf pharmacy' to leverage high CTR and impressions.",
-            "Optimize for 'panadol cold and flu' due to high impressions.",
-            "Enhance visibility for 'gulf pharmacy dubai' with high CTR.",
-            "Target 'daktarin cream' for improved search presence.",
-            "Explore opportunities with 'salibet ointment' for better reach."
-        ],
-        "content_strategy": [
-            "Expand content on low-impression pages to increase visibility.",
-            "Create detailed guides on popular products like 'panadol cold and flu'.",
-            "Develop content around 'gulf pharmacy dubai' to capture local searches.",
-            "Enhance product descriptions for 'daktarin cream' to improve engagement.",
-            "Leverage high CTR keywords for content expansion."
-        ],
-        "roadmap": [
-            "Implement structured data across all pages to enhance search visibility.",
-            "Optimize page speed to improve user experience and rankings.",
-            "Enhance internal linking to distribute page authority effectively.",
-            "Focus on content expansion for low-performing pages.",
-            "Regularly monitor and adjust SEO strategies based on performance data."
-        ],
-        "three_main_search_ranking_factors": {
-            "factors": [
-                "Page speed optimization to improve user experience and rankings.",
-                "Structured data implementation to enhance search visibility.",
-                "Internal linking strategy to distribute page authority effectively."
-            ],
-            "page": 37
-        },
-        "content_wise_study": {
-            "insights": [
-                "Titles over 60 characters need optimization for better search visibility.",
-                "Structured data is present but requires regular validation.",
-                "Internal linking can be improved to enhance page authority distribution.",
-                "Meta descriptions are well-optimized but can be further enhanced.",
-                "Image alt text is missing on several images, impacting accessibility."
-            ],
-            "page": 38
-        },
-        "activities_required": {
-            "actions": [
-                "Submit sitemap.xml in Google Search Console.",
-                "Optimize titles exceeding 60 characters.",
-                "Ensure all images have descriptive alt text.",
-                "Validate structured data markup on all pages.",
-                "Monitor GSC indexing and validate any issues.",
-                "Enhance internal linking from high-traffic pages.",
-                "Configure GA conversion tracking for primary lead form.",
-                "Regularly monitor and adjust SEO strategies based on performance data."
-            ],
-            "page": 39
-        },
-        "seoAuthority": {
-            "organicTraffic": 2594,
-            "paidTraffic": 0,
-            "impressions": 331873,
-            "ctr": 0.78,
-            "avgPosition": 5.19,
-            "organicKeywords": 1000,
-            "domainAuthority": 11,
-            "pageAuthority": 23,
-            "spamScore": 3
-        },
-        "seo_links": {
-            "referringDomains": 46,
-            "backlinks": 116,
-            "totalBacklinks": 3349315,
-            "backlinkTypes": {
-                "dofollow": 51,
-                "nofollow": 65,
-                "redirect": 2
-            }
-        },
-        "opportunities": {
-            "lowCTRKeywords": 50,
-            "nearTop10Keywords": 471
-        },
-
-    };
+const finalAuditJson = {
+  totals: {
+    pages: 10,
+    missing_title: 0,
+    missing_meta: 0,
+    missing_h1: 0,
+    recommendations_count: 0,
+    images_missing_alt: 89,
+    broken_links: 0,
+  },
+  overview: {
+    seo_grade: "A+",
+    recommendations_count: 0,
+    summary_text:
+      "Excellent SEO health. Your website is highly optimized and follows best practices. Maintain consistency and monitor performance regularly.",
+  },
+  technical_fixes: {
+    schema_codes_found: true,
+    schema_note: "10 pages contain structured data markup",
+    sitemap_present: true,
+    sitemap_url: "https://gulfpharmacy.com/sitemap.xml",
+    robots_txt_present: true,
+    sitemap_and_robots_note: null,
+  },
+  ssl_security: {
+    https_supported: true,
+    certificate_valid: true,
+    trusted: true,
+    final_url: "https://gulfpharmacy.com/",
+    note: "SSL is properly configured. Secure HTTPS improves user trust, protects data transmission, and is a confirmed Google ranking factor.",
+    page: 17,
+  },
+  title_optimization: {
+    duplicate_count: 0,
+    titles_below_30: 0,
+    titles_over_60: 9,
+    max_title_length: 100,
+    max_length_title:
+      "Gulf Pharmacy Dubai | Get Up To 70% Off + Free Delivery On Pharmacy & Wellness Products Across Dubai",
+  },
+  header_optimization: {
+    h1: {
+      missing: 0,
+      duplicate: 0,
+      multiple: 0,
+      over_70_characters: 0,
+    },
+    h2: {
+      missing: 0,
+      duplicate: 0,
+      multiple: 10,
+      over_70_characters: 0,
+    },
+    note: "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings.",
+  },
+  meta_description_optimization: {
+    missing_descriptions_count: 0,
+    note: "Optimize meta descriptions using targeted keywords to improve click-through rate.",
+  },
+  url_optimization: {
+    issues_list: [],
+    page: 11,
+  },
+  image_optimization: {
+    images_over_100kb: null,
+    missing_size_attributes: 164,
+    missing_alt_text_count: 89,
+    image_metadata_note:
+      "Images should be optimized with descriptive alt text and appropriate sizing.",
+    page: 10,
+  },
+  overview_scores: {
+    on_page: "A+",
+    links: "F",
+    usability: "A",
+    performance: "F",
+    social: "C",
+    page: 2,
+  },
+  security: {
+    ssl_enabled: true,
+  },
+  page_speed: {
+    mobile: {
+      performance_score: 13,
+      fcp: 8586.558555036077,
+      lcp: 26863.751283181573,
+      cls: 0.7304616074272434,
+      tbt: 776.5,
+      ttfb: 269,
+      speed_index: 16416.27197206219,
+    },
+    desktop: {
+      performance_score: 10,
+      fcp: 2144.695927048868,
+      lcp: 4539.520772073192,
+      cls: 0.8892004752067574,
+      tbt: 731.9999999999995,
+      ttfb: 332,
+      speed_index: 6274.524352376229,
+    },
+  },
+  domain_analysis: {
+    authority_score: null,
+    organic_traffic: 6862,
+    paid_traffic: 0,
+    referring_domains: 0,
+    backlinks: 0,
+    organic_keywords: 10,
+    traffic_share: 0,
+  },
+  backlink_profile: {
+    total_backlinks: 0,
+    referring_domains: 0,
+    distribution: {
+      text: 0,
+      image: 0,
+      form: 0,
+      frame: 0,
+    },
+  },
+  redirects: {
+    total_redirects: 0,
+    redirect_urls: [],
+    note: "No redirect issues detected. All URLs resolve directly without unnecessary redirects.",
+    page: 9,
+  },
+  security_checks: {
+    https_enabled: true,
+    certificate_valid: true,
+    not_expired: true,
+    trusted: true,
+    secure_hash: true,
+  },
+  schema_validation: {
+    total_pages_with_schema: 10,
+    pages_missing_schema: 0,
+    rich_results_detected: true,
+  },
+  social_links: {
+    facebook: ["https://www.facebook.com/GulfPharmacy1/"],
+    instagram: ["https://www.instagram.com/gulfpharmacydubai"],
+    twitter: ["https://x.com/GulfPharmacy"],
+    linkedin: [
+      "https://www.linkedin.com/company/gulf-pharmacy/?originalSubdomain=ae",
+    ],
+    youtube: [],
+  },
+  trending_keywords: {
+    rows: [
+      {
+        name: "gulf pharmacy",
+        clicks: 573,
+        impressions: 5603,
+        avgPosition: 0,
+        ctr: 10.23,
+        percent: "8.4",
+      },
+      {
+        name: "panadol cold and flu",
+        clicks: 257,
+        impressions: 94377,
+        avgPosition: 0,
+        ctr: 0.27,
+        percent: "3.7",
+      },
+      {
+        name: "gulf pharmacy dubai",
+        clicks: 96,
+        impressions: 537,
+        avgPosition: 0,
+        ctr: 17.88,
+        percent: "1.4",
+      },
+      {
+        name: "microsynergy pharmaceuticals fzco",
+        clicks: 51,
+        impressions: 1606,
+        avgPosition: 0,
+        ctr: 3.18,
+        percent: "0.7",
+      },
+      {
+        name: "daktarin cream",
+        clicks: 34,
+        impressions: 1968,
+        avgPosition: 0,
+        ctr: 1.73,
+        percent: "0.5",
+      },
+      {
+        name: "salibet ointment",
+        clicks: 25,
+        impressions: 3318,
+        avgPosition: 0,
+        ctr: 0.75,
+        percent: "0.4",
+      },
+      {
+        name: "gulfpharmacy",
+        clicks: 23,
+        impressions: 85,
+        avgPosition: 0,
+        ctr: 27.06,
+        percent: "0.3",
+      },
+      {
+        name: "fresubin 2kcal",
+        clicks: 22,
+        impressions: 689,
+        avgPosition: 0,
+        ctr: 3.19,
+        percent: "0.3",
+      },
+      {
+        name: "alkacure",
+        clicks: 21,
+        impressions: 1227,
+        avgPosition: 0,
+        ctr: 1.71,
+        percent: "0.3",
+      },
+      {
+        name: "annora pharma fz-llc",
+        clicks: 21,
+        impressions: 291,
+        avgPosition: 0,
+        ctr: 7.22,
+        percent: "0.3",
+      },
+    ],
+  },
+  trending_urls: {
+    rows: [
+      {
+        url: "https://gulfpharmacy.com/",
+        impressions: 89389,
+        clicks: 1378,
+        percent: "7.9",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/over-the-counter-medicines/p/panadol-cold-flu-night-tablets-pack-of-24",
+        impressions: 147120,
+        clicks: 383,
+        percent: "13.0",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/mother-and-baby/p/salibet-reduce-skin-allergy-ointment-30-g",
+        impressions: 29369,
+        clicks: 194,
+        percent: "2.6",
+      },
+      {
+        url: "https://gulfpharmacy.com/brand/annora-pharma-fz-llc",
+        impressions: 4341,
+        clicks: 164,
+        percent: "0.4",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/over-the-counter-medicines/p/daktarin-cream-30g",
+        impressions: 8330,
+        clicks: 109,
+        percent: "0.7",
+      },
+      {
+        url: "https://gulfpharmacy.com/brand/microsynergy-pharmaceuticals-fzco",
+        impressions: 3397,
+        clicks: 104,
+        percent: "0.3",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/otc-medicines-kids/p/zentel-oral-suspension-20-ml",
+        impressions: 12393,
+        clicks: 91,
+        percent: "1.1",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/nutrition-supplements/p/fresubin-2kcal-drink-vanilla-200ml",
+        impressions: 2495,
+        clicks: 85,
+        percent: "0.2",
+      },
+      {
+        url: "https://gulfpharmacy.com/c/otc-medicines-kids/s/deworming",
+        impressions: 6644,
+        clicks: 76,
+        percent: "0.6",
+      },
+      {
+        url: "https://gulfpharmacy.com/contact-us",
+        impressions: 30936,
+        clicks: 71,
+        percent: "2.7",
+      },
+    ],
+  },
+  google_analytics: {
+    google_analytics_found: true,
+    summary: {
+      sessions: 15387,
+      pageviews: 20733,
+      avg_session_duration_minutes: 1.15,
+      bounce_rate_percent: 47.87,
+      conversion_rate_percent: 0.2,
+      total_conversions: 33,
+    },
+  },
+  google_search_console: {
+    google_search_console_found: true,
+    summary: {
+      clicks: 6862,
+      impressions: 1129631,
+      ctr: 0.61,
+      avg_position: 10.689431327575111,
+    },
+  },
+  ga_present: true,
+  gsc_present: true,
+  googleServicesFromPages: {
+    google_analytics: false,
+    google_search_console: true,
+    google_my_business: false,
+  },
+  document_title: "https://gulfpharmacy.com/",
+  basic_setup: {
+    google_analytics_found: true,
+    google_search_console_found: true,
+    google_search_console_note: "GSC data available for analysis",
+    google_my_business_found: false,
+    page: 3,
+  },
+  broken_links: {
+    contains_broken_links: false,
+    rows: [],
+    page: 12,
+  },
+  top_priority_action_plan: {
+    week_1_technical: [
+      "Submit sitemap.xml in Google Search Console and validate index coverage.",
+      "Ensure all pages are served over HTTPS to improve security.",
+      "Check and optimize page speed to improve user experience.",
+      "Validate structured data markup on all pages.",
+      "Review and fix any potential crawlability issues.",
+    ],
+    week_2_on_page: [
+      "Optimize titles over 60 characters for better search visibility.",
+      "Ensure all images have descriptive alt text.",
+      "Review and improve meta descriptions to enhance CTR.",
+      "Check for any missing or duplicate H1 tags.",
+      "Enhance URL readability for better user experience.",
+    ],
+    week_3_content_internal_links: [
+      "Identify and expand content on pages with low impressions.",
+      "Add internal links from high-traffic pages to underperforming pages.",
+      "Optimize anchor text for better keyword relevance.",
+      "Review top-performing pages and scale content strategies.",
+      "Strengthen thin content to improve engagement.",
+    ],
+    week_4_measurement: [
+      "Configure GA conversion tracking for primary lead form.",
+      "Monitor GSC indexing and validate any issues.",
+      "Set up performance monitoring dashboards.",
+      "Track ranking changes for targeted keywords.",
+      "Benchmark monthly performance metrics for growth analysis.",
+    ],
+    page: 14,
+  },
+  graph_data: {
+    seo_health_score: 0,
+    seo_health_breakdown: {
+      on_page: 0,
+      content: 0,
+      internal_links: 0,
+      technical: 0,
+    },
+    seo_performance_score: 0,
+    performance_metrics: {
+      impressions: 1129631,
+      clicks: 6862,
+      ctr: 0.61,
+      avg_position: 10.689431327575111,
+    },
+    page: 15,
+  },
+  voice_search: {
+    faq_present: false,
+    optimized: false,
+    page: 30,
+  },
+  mobile_usability: {
+    viewport_ok: true,
+    tap_targets_ok: true,
+    responsive: true,
+    page: 31,
+  },
+  competitors: [
+    {
+      name: "Competitor A",
+      traffic: 1200,
+      backlinks: 340,
+    },
+    {
+      name: "Competitor B",
+      traffic: 890,
+      backlinks: 210,
+    },
+  ],
+  llm_visibility: {
+    entity_ready: false,
+    schema_ready: false,
+    brand_mentions: 0,
+    page: 34,
+  },
+  keyword_strategy: [
+    "Focus on 'gulf pharmacy' to leverage high CTR and impressions.",
+    "Optimize for 'panadol cold and flu' due to high impressions.",
+    "Enhance visibility for 'gulf pharmacy dubai' with high CTR.",
+    "Target 'daktarin cream' for improved search presence.",
+    "Explore opportunities with 'salibet ointment' for better reach.",
+  ],
+  content_strategy: [
+    "Expand content on low-impression pages to increase visibility.",
+    "Create detailed guides on popular products like 'panadol cold and flu'.",
+    "Develop content around 'gulf pharmacy dubai' to capture local searches.",
+    "Enhance product descriptions for 'daktarin cream' to improve engagement.",
+    "Leverage high CTR keywords for content expansion.",
+  ],
+  roadmap: [
+    "Implement structured data across all pages to enhance search visibility.",
+    "Optimize page speed to improve user experience and rankings.",
+    "Enhance internal linking to distribute page authority effectively.",
+    "Focus on content expansion for low-performing pages.",
+    "Regularly monitor and adjust SEO strategies based on performance data.",
+  ],
+  three_main_search_ranking_factors: {
+    factors: [
+      "Page speed optimization to improve user experience and rankings.",
+      "Structured data implementation to enhance search visibility.",
+      "Internal linking strategy to distribute page authority effectively.",
+    ],
+    page: 37,
+  },
+  content_wise_study: {
+    insights: [
+      "Titles over 60 characters need optimization for better search visibility.",
+      "Structured data is present but requires regular validation.",
+      "Internal linking can be improved to enhance page authority distribution.",
+      "Meta descriptions are well-optimized but can be further enhanced.",
+      "Image alt text is missing on several images, impacting accessibility.",
+    ],
+    page: 38,
+  },
+  activities_required: {
+    actions: [
+      "Submit sitemap.xml in Google Search Console.",
+      "Optimize titles exceeding 60 characters.",
+      "Ensure all images have descriptive alt text.",
+      "Validate structured data markup on all pages.",
+      "Monitor GSC indexing and validate any issues.",
+      "Enhance internal linking from high-traffic pages.",
+      "Configure GA conversion tracking for primary lead form.",
+      "Regularly monitor and adjust SEO strategies based on performance data.",
+    ],
+    page: 39,
+  },
+  seoAuthority: {
+    organicTraffic: 2594,
+    paidTraffic: 0,
+    impressions: 331873,
+    ctr: 0.78,
+    avgPosition: 5.19,
+    organicKeywords: 1000,
+    domainAuthority: 11,
+    pageAuthority: 23,
+    spamScore: 3,
+  },
+  seo_links: {
+    referringDomains: 46,
+    backlinks: 116,
+    totalBacklinks: 3349315,
+    backlinkTypes: {
+      dofollow: 51,
+      nofollow: 65,
+      redirect: 2,
+    },
+  },
+  opportunities: {
+    lowCTRKeywords: 50,
+    nearTop10Keywords: 471,
+  },
+};
 
 async function extractUrls(pageUrl) {
   const { data: html, request } = await axios.get(pageUrl, {
@@ -769,8 +771,6 @@ function removeDuplicatePages(pages) {
   return Array.from(seen.values()).sort((a, b) => a.url.localeCompare(b.url));
 }
 
-
-
 function getOverallSeoNote(rawGrade) {
   // ✅ Normalize input safely
   const grade = String(rawGrade || "")
@@ -839,12 +839,11 @@ const getSeoGradeMessage = (grade) => {
 };
 
 function renderAuditJsonToHtml(data) {
-
   const basic = data.basic_setup || {};
   const ga = data.google_analytics || {};
   const gsc = data.google_search_console || {};
   const gsc_present = data.gsc_present || false;
-  const shots = data.imageData || {}; 
+  const shots = data.imageData || {};
   const safe = (v, fb = "Not available") =>
     v === null || v === undefined || v === "" ? fb : v;
 
@@ -896,9 +895,12 @@ function renderAuditJsonToHtml(data) {
       : `
       <table>
         <tr><th>URL</th><th>Missing</th></tr>
-        ${issues.filter((i)=> i.title !== "404")
+        ${issues
+          .filter((i) => i.title !== "404")
           .map(
-            (i) => `<tr><td><a href="${i.url}" target="_blank" rel="noopener noreferrer">
+            (
+              i,
+            ) => `<tr><td><a href="${i.url}" target="_blank" rel="noopener noreferrer">
               ${i.title || i.url}
             </a></td>
             <td>${i.missing.join(", ")}</td>
@@ -3290,7 +3292,7 @@ img {
                         <td>${r.target_url}</td>
                         <td>${r.status_code}</td>
                       </tr>
-                    `
+                    `,
                   )
                   .join("")}
               </table>
@@ -3523,11 +3525,11 @@ img {
 
       <svg width="260" height="200">
         ${(() => {
-            const totalPages = data?.total?.pages || 100;
+          const totalPages = data?.total?.pages || 100;
           const missing =
             data?.meta_description_optimization?.missing_descriptions_count ||
             0;
-          const ok = Math.max(1,  Number(totalPages) - missing);
+          const ok = Math.max(1, Number(totalPages) - missing);
 
           const max = Math.max(missing, ok, 1);
 
@@ -3609,7 +3611,7 @@ img {
 
   <svg width="340" height="220">
   ${(() => {
-    const h1  = data?.header_optimization?.h1?.missing || 0;
+    const h1 = data?.header_optimization?.h1?.missing || 0;
     const h1d = data?.header_optimization?.h1?.duplicate || 0;
     const h1m = data?.header_optimization?.h1?.multiple || 0;
     const h1o = data?.header_optimization?.h1?.over_70_characters || 0;
@@ -3646,7 +3648,7 @@ img {
     };
 
     return `
-      ${bar(40,  h1,  "Missing")}
+      ${bar(40, h1, "Missing")}
       ${bar(110, h1d, "Duplicate")}
       ${bar(180, h1m, "Multiple")}
       ${bar(250, h1o, "Over 70")}
@@ -3881,7 +3883,7 @@ img {
 
   <p>
     Current Value: 
-    <b>${ formatMsToMinOrSec(data.page_speed?.mobile?.ttfb) || "N/A"}</b>
+    <b>${formatMsToMinOrSec(data.page_speed?.mobile?.ttfb) || "N/A"}</b>
   </p>
 
   <p>Recommended: ≤ 0.8s</p>
@@ -3943,7 +3945,7 @@ img {
 
   <p>
     Current Value:
-    <b>${ formatMsToMinOrSec(data.page_speed?.mobile?.cls) || "N/A"}</b>
+    <b>${formatMsToMinOrSec(data.page_speed?.mobile?.cls) || "N/A"}</b>
   </p>
 
   <p>Recommended: ≤ 0.1</p>
@@ -3978,22 +3980,22 @@ img {
 
         <div class="desktop-metric">
           <span>First Contentful Paint</span>
-          <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.fcp) || "N/A"}</b>
+          <b>${formatMsToMinOrSec(data.page_speed?.desktop?.fcp) || "N/A"}</b>
         </div>
 
         <div class="desktop-metric">
           <span>Largest Contentful Paint</span>
-          <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.lcp) || "N/A"}</b>
+          <b>${formatMsToMinOrSec(data.page_speed?.desktop?.lcp) || "N/A"}</b>
         </div>
 
         <div class="desktop-metric">
           <span>Total Blocking Time</span>
-          <b>${formatMsToMinOrSec(data.page_speed?.desktop?.tbt)|| "N/A"}</b>
+          <b>${formatMsToMinOrSec(data.page_speed?.desktop?.tbt) || "N/A"}</b>
         </div>
  
         <div class="desktop-metric">
           <span>Cumulative Layout Shift</span>
-          <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.cls) || "N/A"}</b>
+          <b>${formatMsToMinOrSec(data.page_speed?.desktop?.cls) || "N/A"}</b>
         </div>
 
       </div>
@@ -4055,7 +4057,7 @@ img {
 
   <p>
     Current Value: 
-    <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.ttfb) || "N/A"}</b>
+    <b>${formatMsToMinOrSec(data.page_speed?.desktop?.ttfb) || "N/A"}</b>
   </p>
 
   <p>Recommended: ≤ 0.8s</p>
@@ -4075,7 +4077,7 @@ img {
 
   <p>
     Current Value:
-    <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.fcp)|| "N/A"}</b>
+    <b>${formatMsToMinOrSec(data.page_speed?.desktop?.fcp) || "N/A"}</b>
   </p>
 
   <p>Recommended: ≤ 1.8s</p>
@@ -4096,7 +4098,7 @@ img {
 
   <p>
     Current Value:
-    <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.lcp) || "N/A"} </b>
+    <b>${formatMsToMinOrSec(data.page_speed?.desktop?.lcp) || "N/A"} </b>
   </p>
 
   <p>Recommended: ≤ 2.5s</p>
@@ -4117,7 +4119,7 @@ img {
 
   <p>
     Current Value:
-    <b>${ formatMsToMinOrSec(data.page_speed?.desktop?.cls) || "N/A"}</b>
+    <b>${formatMsToMinOrSec(data.page_speed?.desktop?.cls) || "N/A"}</b>
   </p>
 
   <p>Recommended: ≤ 0.1</p>
@@ -4296,11 +4298,17 @@ img {
           const rawMax = Math.max(...values, 1);
 
           const step =
-            rawMax <= 50 ? 10 :
-            rawMax <= 100 ? 20 :
-            rawMax <= 500 ? 100 :
-            rawMax <= 2000 ? 500 :
-            rawMax <= 5000 ? 1000 : 2000;
+            rawMax <= 50
+              ? 10
+              : rawMax <= 100
+                ? 20
+                : rawMax <= 500
+                  ? 100
+                  : rawMax <= 2000
+                    ? 500
+                    : rawMax <= 5000
+                      ? 1000
+                      : 2000;
 
           const maxY = Math.ceil(rawMax / step) * step;
 
@@ -4309,15 +4317,17 @@ img {
           );
 
           return `
-            ${yTicks.map((v) => {
-              const y = 230 - (v / maxY) * 180;
-              return `
+            ${yTicks
+              .map((v) => {
+                const y = 230 - (v / maxY) * 180;
+                return `
                 <line class="seo-performance-grid"
                       x1="50" y1="${y}" x2="520" y2="${y}" />
                 <text class="seo-performance-axis"
                       x="20" y="${y + 4}">${v}</text>
               `;
-            }).join("")}
+              })
+              .join("")}
 
             ${["Impressions", "Clicks", "CTR", "Avg Position"]
               .map((l, i) => {
@@ -4327,7 +4337,8 @@ img {
                         x="${x}" y="260"
                         text-anchor="middle">${l}</text>
                 `;
-              }).join("")}
+              })
+              .join("")}
 
             ${(() => {
               const points = values
@@ -4344,13 +4355,16 @@ img {
                           stroke-width="2"
                           points="${points}" />
 
-                ${points.split(" ").map((p) => {
-                  const [x, y] = p.split(",");
-                  return `
+                ${points
+                  .split(" ")
+                  .map((p) => {
+                    const [x, y] = p.split(",");
+                    return `
                     <circle class="seo-performance-point"
                             cx="${x}" cy="${y}" r="4" />
                   `;
-                }).join("")}
+                  })
+                  .join("")}
               `;
             })()}
           `;
@@ -4542,44 +4556,52 @@ img {
         <li class="social-item">
           <span class="social-label">Facebook :</span>
           <span class="social-links">
-            ${data?.social_links?.facebook?.length
-              ? data.social_links.facebook.map(
-                  (url) => `<a href="${url}" target="_blank">${url}</a>`
-                ).join(", ")
-              : "No Link Found"}
+            ${
+              data?.social_links?.facebook?.length
+                ? data.social_links.facebook
+                    .map((url) => `<a href="${url}" target="_blank">${url}</a>`)
+                    .join(", ")
+                : "No Link Found"
+            }
           </span>
         </li>
 
         <li class="social-item">
           <span class="social-label">Instagram :</span>
           <span class="social-links">
-            ${data?.social_links?.instagram?.length
-              ? data.social_links.instagram.map(
-                  (url) => `<a href="${url}" target="_blank">${url}</a>`
-                ).join(", ")
-              : "No Link Found"}
+            ${
+              data?.social_links?.instagram?.length
+                ? data.social_links.instagram
+                    .map((url) => `<a href="${url}" target="_blank">${url}</a>`)
+                    .join(", ")
+                : "No Link Found"
+            }
           </span>
         </li>
 
         <li class="social-item">
           <span class="social-label">LinkedIn :</span>
           <span class="social-links">
-            ${data?.social_links?.linkedin?.length
-              ? data.social_links.linkedin.map(
-                  (url) => `<a href="${url}" target="_blank">${url}</a>`
-                ).join(", ")
-              : "No Link Found"}
+            ${
+              data?.social_links?.linkedin?.length
+                ? data.social_links.linkedin
+                    .map((url) => `<a href="${url}" target="_blank">${url}</a>`)
+                    .join(", ")
+                : "No Link Found"
+            }
           </span>
         </li>
 
         <li class="social-item">
           <span class="social-label">YouTube :</span>
           <span class="social-links">
-            ${data?.social_links?.youtube?.length
-              ? data.social_links.youtube.map(
-                  (url) => `<a href="${url}" target="_blank">${url}</a>`
-                ).join(", ")
-              : "No Link Found"}
+            ${
+              data?.social_links?.youtube?.length
+                ? data.social_links.youtube
+                    .map((url) => `<a href="${url}" target="_blank">${url}</a>`)
+                    .join(", ")
+                : "No Link Found"
+            }
           </span>
         </li>
 
@@ -4722,7 +4744,7 @@ ${
                     <td>${k.impressions}</td>
                     <td>${k.percent}</td>
                   </tr>
-                `
+                `,
               )
               .join("")}
           </table>
@@ -4886,7 +4908,6 @@ function formatMsToMinOrSec(ms) {
   return `${minutes}.${seconds.toString().padStart(2, "0")} min`;
 }
 
-
 async function checkSslCertificate(url) {
   try {
     const httpsUrl = url.replace(/^http:\/\//, "https://");
@@ -4922,11 +4943,10 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
   ----------------------------- */
   const missingTitle = pages.filter((p) => !p.data?.title?.trim()).length;
 
-const missingMeta = pages.filter((p) => {
-  const meta = p.data?.meta_description;
-  return typeof meta !== "string" || meta.trim() === "";
-}).length;
-
+  const missingMeta = pages.filter((p) => {
+    const meta = p.data?.meta_description;
+    return typeof meta !== "string" || meta.trim() === "";
+  }).length;
 
   const missingH1 = pages.filter(
     (p) => !p.data?.h1 || p.data.h1.length === 0,
@@ -4993,29 +5013,26 @@ const missingMeta = pages.filter((p) => {
   let duplicateTitles = 0;
   let titlesBelow30 = 0;
   let titlesOver60 = 0;
-let maxTitleLength = 0;
-let maxLengthTitle = null;
-
+  let maxTitleLength = 0;
+  let maxLengthTitle = null;
 
   pages.forEach((p) => {
-  const title = p.data?.title || "";
-  const normalizedTitle = p.data?.title_normalized || "";
-  const length = p.data?.title_length || 0;
+    const title = p.data?.title || "";
+    const normalizedTitle = p.data?.title_normalized || "";
+    const length = p.data?.title_length || 0;
 
-  if (normalizedTitle) {
-    titleMap[normalizedTitle] = (titleMap[normalizedTitle] || 0) + 1;
-  }
+    if (normalizedTitle) {
+      titleMap[normalizedTitle] = (titleMap[normalizedTitle] || 0) + 1;
+    }
 
-  if (length > 0 && length < 30) titlesBelow30++;
-  if (length > 60) titlesOver60++;
+    if (length > 0 && length < 30) titlesBelow30++;
+    if (length > 60) titlesOver60++;
 
-
-  if (length > maxTitleLength && title) {
-    maxTitleLength = length;
-    maxLengthTitle = title;
-  }
-});
-
+    if (length > maxTitleLength && title) {
+      maxTitleLength = length;
+      maxLengthTitle = title;
+    }
+  });
 
   duplicateTitles = Object.values(titleMap).filter((v) => v > 1).length;
 
@@ -5023,56 +5040,55 @@ let maxLengthTitle = null;
      HEADER OPTIMIZATION
   ----------------------------- */
 
-
   let h1Missing = 0;
-let h1Duplicate = 0;
-let h1Multiple = 0;
-let h1Over70 = 0;
+  let h1Duplicate = 0;
+  let h1Multiple = 0;
+  let h1Over70 = 0;
 
-let h2Missing = 0;
-let h2Duplicate = 0;
-let h2Multiple = 0;
-let h2Over70 = 0;
+  let h2Missing = 0;
+  let h2Duplicate = 0;
+  let h2Multiple = 0;
+  let h2Over70 = 0;
 
-pages.forEach((p) => {
-  /* ---------- H1 ---------- */
-  const h1List = Array.isArray(p.data?.h1) ? p.data.h1 : [];
-  const h1Normalized = p.data?.h1_normalized || [];
+  pages.forEach((p) => {
+    /* ---------- H1 ---------- */
+    const h1List = Array.isArray(p.data?.h1) ? p.data.h1 : [];
+    const h1Normalized = p.data?.h1_normalized || [];
 
-  if (h1List.length === 0) h1Missing++;
-  if (h1List.length > 1) h1Multiple++;
+    if (h1List.length === 0) h1Missing++;
+    if (h1List.length > 1) h1Multiple++;
 
-  const h1Map = {};
-  h1Normalized.forEach((h) => {
-    if (!h || h.trim() === "") return;
+    const h1Map = {};
+    h1Normalized.forEach((h) => {
+      if (!h || h.trim() === "") return;
 
-    h1Map[h] = (h1Map[h] || 0) + 1;
-    if (h.length > 70) h1Over70++;
+      h1Map[h] = (h1Map[h] || 0) + 1;
+      if (h.length > 70) h1Over70++;
+    });
+
+    if (Object.values(h1Map).some((v) => v > 1)) {
+      h1Duplicate++;
+    }
+
+    /* ---------- H2 ---------- */
+    const h2List = Array.isArray(p.data?.h2) ? p.data.h2 : [];
+    const h2Normalized = p.data?.h2_normalized || [];
+
+    if (h2List.length === 0) h2Missing++;
+    if (h2List.length > 1) h2Multiple++;
+
+    const h2Map = {};
+    h2Normalized.forEach((h) => {
+      if (!h || h.trim() === "") return;
+
+      h2Map[h] = (h2Map[h] || 0) + 1;
+      if (h.length > 70) h2Over70++;
+    });
+
+    if (Object.values(h2Map).some((v) => v > 1)) {
+      h2Duplicate++;
+    }
   });
-
-  if (Object.values(h1Map).some((v) => v > 1)) {
-    h1Duplicate++;
-  }
-
-  /* ---------- H2 ---------- */
-  const h2List = Array.isArray(p.data?.h2) ? p.data.h2 : [];
-  const h2Normalized = p.data?.h2_normalized || [];
-
-  if (h2List.length === 0) h2Missing++;
-  if (h2List.length > 1) h2Multiple++;
-
-  const h2Map = {};
-  h2Normalized.forEach((h) => {
-    if (!h || h.trim() === "") return;
-
-    h2Map[h] = (h2Map[h] || 0) + 1;
-    if (h.length > 70) h2Over70++;
-  });
-
-  if (Object.values(h2Map).some((v) => v > 1)) {
-    h2Duplicate++;
-  }
-});
 
   /* -----------------------------
    IMAGE OPTIMIZATION
@@ -5213,19 +5229,19 @@ pages.forEach((p) => {
   /* -----------------------------
    GOOGLE SERVICES (AGGREGATED FROM PAGES)
 ----------------------------- */
-const googleServicesFromPages = {
-  google_analytics: pages.some(
-    p => p.data?.google_services?.google_analytics === true
-  ),
+  const googleServicesFromPages = {
+    google_analytics: pages.some(
+      (p) => p.data?.google_services?.google_analytics === true,
+    ),
 
-  google_search_console: pages.some(
-    p => p.data?.google_services?.google_search_console === true
-  ),
+    google_search_console: pages.some(
+      (p) => p.data?.google_services?.google_search_console === true,
+    ),
 
-  google_my_business: pages.some(
-    p => p.data?.google_services?.google_my_business === true
-  ),
-};
+    google_my_business: pages.some(
+      (p) => p.data?.google_services?.google_my_business === true,
+    ),
+  };
 
   return {
     totals: {
@@ -5255,7 +5271,7 @@ const googleServicesFromPages = {
       sitemap_url: detectedSitemapUrl,
 
       robots_txt_present: robotsPresent,
-sitemap_and_robots_note: null,
+      sitemap_and_robots_note: null,
     },
 
     ssl_security: {
@@ -5269,36 +5285,34 @@ sitemap_and_robots_note: null,
       page: 17,
     },
 
-
     title_optimization: {
-  duplicate_count: duplicateTitles,
-  titles_below_30: titlesBelow30,
-  titles_over_60: titlesOver60,
+      duplicate_count: duplicateTitles,
+      titles_below_30: titlesBelow30,
+      titles_over_60: titlesOver60,
 
-  max_title_length: maxTitleLength,
-  max_length_title: maxLengthTitle,
-},
+      max_title_length: maxTitleLength,
+      max_length_title: maxLengthTitle,
+    },
 
-
-header_optimization: {
-  h1: {
-    missing: h1Missing,
-    duplicate: h1Duplicate,
-    multiple: h1Multiple,
-    over_70_characters: h1Over70,
-  },
-  h2: {
-    missing: h2Missing,
-    duplicate: h2Duplicate,
-    multiple: h2Multiple,
-    over_70_characters: h2Over70,
-  },
-  note: "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings.",
-},
-meta_description_optimization:{
-    missing_descriptions_count: missingMeta,
-    note: "Optimize meta descriptions using targeted keywords to improve click-through rate.",
-},
+    header_optimization: {
+      h1: {
+        missing: h1Missing,
+        duplicate: h1Duplicate,
+        multiple: h1Multiple,
+        over_70_characters: h1Over70,
+      },
+      h2: {
+        missing: h2Missing,
+        duplicate: h2Duplicate,
+        multiple: h2Multiple,
+        over_70_characters: h2Over70,
+      },
+      note: "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings.",
+    },
+    meta_description_optimization: {
+      missing_descriptions_count: missingMeta,
+      note: "Optimize meta descriptions using targeted keywords to improve click-through rate.",
+    },
     url_optimization: {
       issues_list: urlIssues,
       page: 11,
@@ -5348,37 +5362,35 @@ meta_description_optimization:{
 
     schema_validation: schemaSummary,
     social_links: aggregatedSocialLinks,
-    trending_keywords: gsc?.topQueries
-      ? {  rows: gsc.topQueries} : null,
-      trending_urls: gsc?.topPages
-      ? { rows: gsc.topPages } : null,
+    trending_keywords: gsc?.topQueries ? { rows: gsc.topQueries } : null,
+    trending_urls: gsc?.topPages ? { rows: gsc.topPages } : null,
 
-        google_analytics: {
-    google_analytics_found:!!ga,
-    summary: {
-      sessions:ga?.sessions ?? null,
-      pageviews:ga?.pageviews ?? null,
-      avg_session_duration_minutes:ga?.avgSessionDurationMinutes ?? null,
-      bounce_rate_percent:ga?.bounceRatePercent ?? null,
-      conversion_rate_percent:ga?.sessionConversionRatePercent ?? null,
-      total_conversions:ga?.totalConversions ?? null
-    }
-  },
-      
- google_search_console: {
-    google_search_console_found: !!gsc,
-  summary: {
-      clicks: gsc?.summary?.web?.clicks ?? null,
-      impressions: gsc?.summary?.web?.impressions ?? null,
-      ctr: gsc?.summary?.web?.ctr ?? null,
-      avg_position: gsc?.summary?.web?.avg_position ?? null
-    }
-  },
+    google_analytics: {
+      google_analytics_found: !!ga,
+      summary: {
+        sessions: ga?.sessions ?? null,
+        pageviews: ga?.pageviews ?? null,
+        avg_session_duration_minutes: ga?.avgSessionDurationMinutes ?? null,
+        bounce_rate_percent: ga?.bounceRatePercent ?? null,
+        conversion_rate_percent: ga?.sessionConversionRatePercent ?? null,
+        total_conversions: ga?.totalConversions ?? null,
+      },
+    },
+
+    google_search_console: {
+      google_search_console_found: !!gsc,
+      summary: {
+        clicks: gsc?.summary?.web?.clicks ?? null,
+        impressions: gsc?.summary?.web?.impressions ?? null,
+        ctr: gsc?.summary?.web?.ctr ?? null,
+        avg_position: gsc?.summary?.web?.avg_position ?? null,
+      },
+    },
 
     ga_present: !!ga,
     gsc_present: !!gsc,
 
-    googleServicesFromPages
+    googleServicesFromPages,
   };
 }
 
@@ -5406,7 +5418,7 @@ async function fetchPageSpeed(url, strategy = "mobile") {
       lcp: audits["largest-contentful-paint"]?.numericValue || 0,
       cls: audits["cumulative-layout-shift"]?.numericValue || 0,
       tbt: audits["total-blocking-time"]?.numericValue || 0,
-      ttfb: audits["server-response-time"]?.numericValue  || 0,
+      ttfb: audits["server-response-time"]?.numericValue || 0,
       speed_index: audits["speed-index"]?.numericValue || 0,
     };
   } catch (err) {
@@ -5431,8 +5443,8 @@ async function getUrlsFromSitemap(sitemapUrl) {
     responseType: "arraybuffer",
     timeout: 20000,
     headers: {
-      "User-Agent": "SEO-Audit-Bot"
-    }
+      "User-Agent": "SEO-Audit-Bot",
+    },
   });
 
   let xml;
@@ -5446,8 +5458,9 @@ async function getUrlsFromSitemap(sitemapUrl) {
 
   // 📌 Sitemap index
   if (xml.includes("<sitemapindex")) {
-    const sitemapUrls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)]
-      .map(m => m[1]);
+    const sitemapUrls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(
+      (m) => m[1],
+    );
 
     let urls = [];
     for (const smUrl of sitemapUrls) {
@@ -5459,8 +5472,7 @@ async function getUrlsFromSitemap(sitemapUrl) {
 
   // 📌 Regular sitemap
   if (xml.includes("<urlset")) {
-    return [...xml.matchAll(/<loc>(.*?)<\/loc>/g)]
-      .map(m => m[1]);
+    return [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
   }
 
   return [];
@@ -5468,38 +5480,49 @@ async function getUrlsFromSitemap(sitemapUrl) {
 
 exports.generatePdf = async (req, res) => {
   try {
-    const { id } = req.query;
+    // const { id } = req.query;
 
-    const domain = await Domain.findOne({ where: { id } });
+    // const domain = await Domain.findOne({ where: { id } });
+    // if (!domain) {
+    //   return res.json({
+    //     status: false,
+    //     message: "No domain data found",
+    //   });
+    // }
+    const userId = String(req.user?.id);
+    // console.log("userId", userId)
+const domain = await Brand.findOne({
+      where: { user_id: userId },
+    });
+// return res.json(domain);
     if (!domain) {
       return res.json({
         status: false,
-        message: "No domain data found",
+        message: "No domain found for this user",
       });
     }
+
+    const id = String(domain.user_id);
     const endDate = new Date().toISOString().split("T")[0];
     const start = new Date(endDate);
     start.setMonth(start.getMonth() - 6);
     const startDate = start.toISOString().split("T")[0];
 
-
-
     const urls = await Urls.findAll({ where: { domainId: id } });
 
-//      const Urls = await getUrlsFromSitemap(`${domain.domain}sitemap.xml`);
-//     if (!Urls.length) {
-//       return res.json({
-//         status: false,
-//         message: "No URLs found for domain",
-//       });
-//     }
-    const pageUrls = Urls.map((u) => u.url);
-//     const pageUrls = Urls.slice(0, 10);
+    //      const Urls = await getUrlsFromSitemap(`${domain.domain}sitemap.xml`);
+    //     if (!Urls.length) {
+    //       return res.json({
+    //         status: false,
+    //         message: "No URLs found for domain",
+    //       });
+    //     }
+    const pageUrls = urls.map((u) => u.url);
+    //     const pageUrls = Urls.slice(0, 10);
 
+    // console.log("url fetch", Urls.length);
 
-// console.log("url fetch", Urls.length);
-
-        /* ------------------------------------
+    /* ------------------------------------
            2. Crawl pages
         ------------------------------------ */
 
@@ -5508,28 +5531,25 @@ exports.generatePdf = async (req, res) => {
     console.log("after pagesData", pagesData.length);
     // console.log("pagesData", pagesData[0]);
 
-// // await Webpage.bulkCreate(
-// //   pagesData.map((page) => ({
-// //     domainId: 8,
-// //     url: page.url,
-// //     title: page?.data?.title || '',
-// //     date: new Date(),
-// //     meta_description: page?.data?.meta_description || '',
-// //     body_text: page?.data?.body_text || '',
-// //     canonical: page?.data?.canonical || '',
-// //     h1: page?.data?.h1 || [],
-// //     h2: page?.data?.h2 || [],
-// //   }))
-// // );
-
-
-  
+    // // await Webpage.bulkCreate(
+    // //   pagesData.map((page) => ({
+    // //     domainId: 8,
+    // //     url: page.url,
+    // //     title: page?.data?.title || '',
+    // //     date: new Date(),
+    // //     meta_description: page?.data?.meta_description || '',
+    // //     body_text: page?.data?.body_text || '',
+    // //     canonical: page?.data?.canonical || '',
+    // //     h1: page?.data?.h1 || [],
+    // //     h2: page?.data?.h2 || [],
+    // //   }))
+    // // );
 
     /* ------------------------------------
        3A. Fetch PageSpeed from DOMAIN URL
     ------------------------------------ */
 
- console.log("🚀 Fetching PageSpeed for domain homepage...");
+    console.log("🚀 Fetching PageSpeed for domain homepage...");
 
     let pageSpeed = null;
 
@@ -5548,18 +5568,18 @@ exports.generatePdf = async (req, res) => {
         message: "No page HTML data fetched",
       });
     }
-//     /* ------------------------------------
-//            3. Fetch GA + GSC
-//         ------------------------------------ */
-
+    //     /* ------------------------------------
+    //            3. Fetch GA + GSC
+    //         ------------------------------------ */
+const siteUrl =domain.domain[0]
     const getdata = await getGSCDataAndSEOOverview({
-      siteUrl :domain.domain,        
-  refreshToken: domain.gsc_refresh_token,       
-  startDate: startDate,   
-  endDate: endDate
- });
+      siteUrl: siteUrl,
+      refreshToken: domain.gsc_refresh_token,
+      startDate: startDate,
+      endDate: endDate,
+    });
 
-// //  return res.json({success:true, data:getdata});
+    // //  return res.json({success:true, data:getdata});
     const gaData = domain.ga_refresh_token
       ? await getGASeoData({
           refreshToken: domain.ga_refresh_token,
@@ -5572,15 +5592,13 @@ exports.generatePdf = async (req, res) => {
     const gscData = domain.gsc_refresh_token
       ? await getGSCSeoData({
           refreshToken: domain.gsc_refresh_token,
-          siteUrl: domain.domain,
+          siteUrl:siteUrl,
           startDate,
           endDate,
         })
       : null;
 
-
-console.log("ga gsc fetch");
-
+    console.log("ga gsc fetch");
 
     /* ------------------------------------
            4. Normalize facts (THIS IS CRITICAL)
@@ -5592,13 +5610,13 @@ console.log("ga gsc fetch");
       pageSpeed,
     );
 
-    console.log("AUDIT FACTS" );
+    console.log("AUDIT FACTS");
 
     /* ------------------------------------
            5. Generate FULL SEO AUDIT JSON (AI)
         ------------------------------------ */
 
-// const aiData = pagesData.map(p => ({ url: p.url, isRedirect: p.isRedirect }));
+    // const aiData = pagesData.map(p => ({ url: p.url, isRedirect: p.isRedirect }));
 
     const auditJson = await generateSeoAuditJson({
       domain,
@@ -5607,15 +5625,12 @@ console.log("ga gsc fetch");
       gscData,
       auditFacts,
     });
-//     if (!auditJson || typeof auditJson !== "object") {
-//       throw new Error("AI audit JSON generation failed");
-//     }
-console.log("auditfetch fetch");
-
+    //     if (!auditJson || typeof auditJson !== "object") {
+    //       throw new Error("AI audit JSON generation failed");
+    //     }
+    console.log("auditfetch fetch");
 
     // return res.json({success:true, data:auditJson});
-
-
 
     /* ------------------------------------
        7. Generate PDF
@@ -5634,40 +5649,40 @@ console.log("auditfetch fetch");
 
     const page = await browser.newPage();
 
-   /* ---------- DESKTOP ---------- */
+    /* ---------- DESKTOP ---------- */
     const desktopPage = await browser.newPage();
- 
+
     await desktopPage.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
     );
- 
-    await desktopPage.setViewport({ width: 1366, height: 768 });
- const targetUrl = domain.domain.startsWith("http")
-  ? domain.domain
-  : `https://${domain.domain}`;
 
-    await desktopPage.goto( targetUrl, {
+    await desktopPage.setViewport({ width: 1366, height: 768 });
+    const targetUrl = siteUrl.startsWith("http")
+      ? siteUrl
+      : `https://${siteUrl}`;
+
+    await desktopPage.goto(targetUrl, {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
- 
+
     await desktopPage.waitForSelector("body", { visible: true });
     await delay(3000);
- 
+
     const desktop = await desktopPage.screenshot({
       encoding: "base64",
       fullPage: false,
     });
- 
+
     await desktopPage.close();
- 
+
     /* ---------- MOBILE ---------- */
     const mobilePage = await browser.newPage();
- 
+
     await mobilePage.setUserAgent(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
     );
- 
+
     await mobilePage.setViewport({
       width: 375,
       height: 667,
@@ -5675,49 +5690,49 @@ console.log("auditfetch fetch");
       hasTouch: true,
       deviceScaleFactor: 2,
     });
- 
-    await mobilePage.goto( targetUrl, {
+
+    await mobilePage.goto(targetUrl, {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
- 
+
     await mobilePage.waitForSelector("body", { visible: true });
     await delay(3000);
- 
+
     const mobile = await mobilePage.screenshot({
       encoding: "base64",
       fullPage: false,
     });
- 
+
     await mobilePage.close();
- 
+
     console.log("Desktop length:", desktop?.length);
     console.log("Mobile length:", mobile?.length);
- 
-    imageData = { desktop, mobile };
-     const finalAuditJson = {
-  ...auditFacts,    
-  ...auditJson,   
- ...getdata     
-};
 
-     const finalAuditJson2 = {
-  ...finalAuditJson,
-imageData
-};
+    imageData = { desktop, mobile };
+    const finalAuditJson = {
+      ...auditFacts,
+      ...auditJson,
+      ...getdata,
+    };
+
+    const finalAuditJson2 = {
+      ...finalAuditJson,
+      imageData,
+    };
 
     const html = renderAuditJsonToHtml(finalAuditJson2);
- 
-   page.setDefaultNavigationTimeout(0);
-page.setDefaultTimeout(0);
 
-await page.setContent(html, {
-  waitUntil: "domcontentloaded",
-});
+    page.setDefaultNavigationTimeout(0);
+    page.setDefaultTimeout(0);
 
-await new Promise((r) => setTimeout(r, 2000));
+    await page.setContent(html, {
+      waitUntil: "domcontentloaded",
+    });
 
-await page.pdf({
+    await new Promise((r) => setTimeout(r, 2000));
+
+    await page.pdf({
       path: pdfPath,
       format: "A4",
       landscape: true,
@@ -5739,8 +5754,8 @@ await page.pdf({
       success: true,
       pdfPath,
       finalAuditJson2,
-    //   pages: pagesData.length,
-    //   auditJson,
+      //   pages: pagesData.length,
+      //   auditJson,
     });
   } catch (err) {
     console.error("❌ PDF ERROR", err);
@@ -5760,7 +5775,6 @@ function extractPureJSON(text) {
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
-
 
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
@@ -5802,7 +5816,6 @@ Rules:
 - No explanations
 `;
 
-
     const llmResponse = await runPrompt(promptForInformation);
     const cleanLocationJSON = extractPureJSON(llmResponse);
     const results = JSON.parse(cleanLocationJSON);
@@ -5822,31 +5835,25 @@ Respond ONLY in valid JSON using this exact format:
   ]
 }
 `;
-const surpData = runSerp({
-
-  title:`List the best ${results.business_type} brands in ${results.city}, ${results.country}`
-})
+    const surpData = runSerp({
+      title: `List the best ${results.business_type} brands in ${results.city}, ${results.country}`,
+    });
     // const rawCompanies = await runPrompt(promptForData);
     // const cleanCompaniesJSON = extractPureJSON(rawCompanies);
     // const companiesResult = JSON.parse(cleanCompaniesJSON);
 
-
-    // //gemini 
+    // //gemini
     // const geminiResponse = await runPromptGemini(promptForData);
     // const cleanGeminiJSON = extractPureJSON(geminiResponse);
     // const geminiResult = JSON.parse(cleanGeminiJSON);
 
-
-
-
     return res.json({
       success: true,
       location: results,
-//       openAi: companiesResult,
-// gemini:geminiResult,
-surpData
+      //       openAi: companiesResult,
+      // gemini:geminiResult,
+      surpData,
     });
-
   } catch (err) {
     console.error("LLM ERROR", err);
     res.status(500).json({
@@ -5856,12 +5863,10 @@ surpData
   }
 };
 
-
 const xml2js = require("xml2js");
 const { runSerp } = require("../routes/getSurpData");
 
 const parser = new xml2js.Parser({ trim: true });
-
 
 const VISITED_SITEMAPS = new Set();
 
@@ -5915,13 +5920,28 @@ async function fetchAllSitemapUrls(baseUrl) {
 
 exports.getUrl = async (req, res) => {
   try {
-    const { id, url, limit = 2000 } = req.body;
-
+    const { url, limit = 20 } = req.body;
+    const userId = req.user?.id;
+const domain = await Brand.findOne({where: {user_id: userId}});
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    console.log("userrrr", userId);
+    if (!domain) {
+      return res.status(200).json({
+        success: false,
+        message: "No user found",
+      });
+    }
+    const domainId = domain.id;
     if (!url) {
       return res.status(200).json({ error: "URL is required" });
     }
 
-    if (!id) {
+    if (!userId) {
       return res.status(200).json({ error: "Invalid User" });
     }
 
@@ -5948,7 +5968,8 @@ exports.getUrl = async (req, res) => {
     console.log("pageUrls count:", pageUrls.length);
 
     const records = pageUrls.map((pageUrl) => ({
-      domainId: id,
+      user_id: userId,
+      domainId: domainId,
       url: pageUrl,
     }));
 
@@ -5958,6 +5979,7 @@ exports.getUrl = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      user_id: userId,
       total: pageUrls.length,
       data: pageUrls,
     });
@@ -5966,13 +5988,146 @@ exports.getUrl = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+// exports.getUrl = async (req, res) => {
+//   try {
+//     const { url, limit = 2000 } = req.body;
+//     const userId = req.user?.id;
+
+
+//     if (!userId) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Unauthorized",
+//       });
+//     }
+
+//     if (!url) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "URL is required",
+//       });
+//     }
+
+//     const brand = await Brand.findOne({
+//       where: { user_id: userId },
+//       attributes: ["id", "domain"],
+//       logging: console.log,
+//     });
+
+//     // console.log("🏷️ Brand found:", brand);
+
+//     if (!brand) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No brand found for this user",
+//       });
+//     }
+
+//     /* ==========================
+//        🔒 HANDLE JSONB DOMAIN SAFELY
+//     ========================== */
+//     let allowedDomains = [];
+
+//     if (Array.isArray(brand.domain)) {
+//       allowedDomains = brand.domain;
+//     } else if (typeof brand.domain === "string") {
+//       allowedDomains = [brand.domain];
+//     } else if (
+//       brand.domain &&
+//       typeof brand.domain === "object"
+//     ) {
+//       allowedDomains = Object.values(brand.domain);
+//     }
+
+//     if (!allowedDomains.length) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Brand domain is not configured",
+//       });
+//     }
+
+//     const normalizedInputUrl = url.trim().replace(/\/$/, "");
+
+//     const isValidDomain = allowedDomains.some((d) => {
+//       if (typeof d !== "string") return false;
+//       return normalizedInputUrl.startsWith(
+//         d.trim().replace(/\/$/, "")
+//       );
+//     });
+
+//     if (!isValidDomain) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "URL does not belong to your brand domain",
+//       });
+//     }
+
+//     const brandId = brand.id;
+
+//     /* ==========================
+//        🗺️ FETCH URLS
+//     ========================== */
+//     let pageUrls = [];
+
+//     pageUrls = await fetchAllSitemapUrls(url);
+
+//     if (!pageUrls.length) {
+//       pageUrls = await crawlSite(url, Number(limit), 8);
+//     }
+
+//     if (!pageUrls.length) {
+//       return res.status(200).json({
+//         success: false,
+//         message: "No page URLs found",
+//       });
+//     }
+
+//     pageUrls = [...new Set(pageUrls)]
+//       .slice(0, Number(limit));
+
+//     // console.log("📄 Final URL count:", pageUrls.length);
+
+//     /* ==========================
+//        💾 SAVE URLS
+//     ========================== */
+//     const records = pageUrls.map((pageUrl) => ({
+//       user_id: userId,
+//       domainId: brandId,
+//       url: pageUrl,
+//     }));
+
+//     await Urls.bulkCreate(records, {
+//       updateOnDuplicate: ["url"],
+//       logging: console.log,
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       user_id: userId,
+//       brandId,
+//       total: pageUrls.length,
+//       data: pageUrls,
+//     });
+
+//   } catch (error) {
+//     console.error("🔥 getUrl error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
+
+
+
 
 exports.generatePageData = async (req, res) => {
-  try{
-    const { id } = req.query;
-    if (!id) {
-      return res.status(200).json({ error: "Invalid User" });
-    } 
+  try {
+    // const { id } = req.query;
+    // if (!id) {
+    //   return res.status(200).json({ error: "Invalid User" });
+    // }
     // const domain = await Domain.findOne({ where: { id } });
     // if (!domain) {
     //   return res.json({
@@ -5980,42 +6135,70 @@ exports.generatePageData = async (req, res) => {
     //     message: "No domain data found",
     //   });
     // }
-    const urls = await Urls.findAll({ where: { domainId: id } });
+    const userId = req.user?.id;
+
+       console.log("userId", userId);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+const domain = await Brand.findOne({
+      where: { user_id: userId },
+     
+    });
+// return res.json(domain);
+    if (!domain) {
+      return res.json({
+        status: false,
+        message: "No domain found for this user",
+      });
+    }
+
+    const id = domain.user_id;
+    const urls = await Urls.findAll({ where: { user_id: id } });
     if (!urls.length) {
       return res.json({
         status: false,
         message: "No URLs found for domain",
       });
     }
+
+// return res.json(urls);
+
     const pageUrls = urls.map((u) => u.url);
     let pagesData = await fetchPagesInBatches(pageUrls, 5);
     pagesData = await removeDuplicatePages(pagesData);
 
     await Webpage.bulkCreate(
-  pagesData.map((page) => ({
-    domainId: id,
-    url: page.url,
-    title: page?.data?.title || '',
-    date: new Date(),
-    meta_description: page?.data?.meta_description || '',
-    body_text: page?.data?.body_text || '',
-    canonical: page?.data?.canonical || '',
-    h1: page?.data?.h1 || [],
-    h2: page?.data?.h2 || [],
-  }))
-);
+      pagesData.map((page) => ({
+        user_id: userId,
+        domainId: id,
+        url: page.url,
+        title: page?.data?.title || "",
+        date: new Date(),
+        meta_description: page?.data?.meta_description || "",
+        body_text: page?.data?.body_text || "",
+        canonical: page?.data?.canonical || "",
+        h1: page?.data?.h1 || [],
+        h2: page?.data?.h2 || [],
+      })),
+    );
 
     console.log("after pagesData", pagesData.length);
     return res.json({
       success: true,
+      user_id: userId,
+
       pagesFetched: pagesData.length,
     });
-  }
-  catch (err) {
+  } catch (err) {
     console.error("❌ PAGE DATA ERROR", err);
     res.status(500).json({
       success: false,
       error: err.message,
     });
   }
-}
+};

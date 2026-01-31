@@ -15,6 +15,10 @@ const Urls = sequelize.define('urls', {
     type: DataTypes.TEXT,
     allowNull:true,
   },
+    user_id: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
 },
  {
     timestamps: false,
