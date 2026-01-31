@@ -640,28 +640,6 @@ Rules:
 - Each item must be a short actionable sentence
 - Maximum 6 items per week
 
-==========================
-OVERVIEW SCORES (CRITICAL)
-==========================
-
-You MUST ALWAYS generate grades for ALL overview_scores fields.
-
-Rules:
-- overview_scores.on_page → REQUIRED
-- overview_scores.links → REQUIRED
-- overview_scores.usability → REQUIRED
-- overview_scores.performance → REQUIRED
-- overview_scores.social → REQUIRED
-
-Grades MUST be one of:
-A+, A, B+, B, C+, C, D+, D, F
-
-IMPORTANT:
-- Grades must NEVER be null
-- If data is weak or missing → assign a LOW grade (D+ or F)
-- If performance data (CWV / PSI) is missing → performance MUST be "F"
-- If social signals are missing → social MUST be "F"
-- Conservative grading is REQUIRED
 
 ====================================
 10. GRAPH DATA OUTPUT (MANDATORY)
@@ -949,14 +927,7 @@ JSON SCHEMA (MANDATORY)
 {
 
 "document_title": ${JSON.stringify(domain?.domain ?? null)},
-  "overview_scores": {
-    "on_page": null,
-    "links": null,
-    "usability": null,
-    "performance": null,
-    "social": null,
-    "page": 2
-  },
+
 
   "basic_setup": {
     "google_analytics_found": ${!!gaData},

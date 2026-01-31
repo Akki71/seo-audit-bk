@@ -5,8 +5,8 @@ exports.runSerp = async (
   let query = title;
 
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&hl=en&gl=in`;
+// console.log("url", googleUrl)
 
-  console.log("Bright Data Google URL:", googleUrl);
   const payload = {
     zone: process.env.BRIGHT_DATA_ZONE,
     url: googleUrl,
@@ -24,11 +24,7 @@ exports.runSerp = async (
       body: JSON.stringify(payload),
     });
     const data = await response.json();
-    console.log(
-      " Bright Data Response Keys:",
-      data
-    );
-console.log(" Bright Data Full Response:", JSON.stringify(data));
+
     if (!data || data.status === "error") {
       throw new Error(data?.message || "Bright Data Error");
     }

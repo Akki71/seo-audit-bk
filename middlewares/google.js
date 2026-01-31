@@ -365,12 +365,27 @@ exports.getGSCDataAndSEOOverview = async ({
 }) => {
 
   // 1️⃣ GET GOOGLE ACCESS TOKEN
-  const tokenRes = await refreshGoogleAccessToken(refreshToken);
-  const accessToken = tokenRes.access_token;
+let accessToken = null;
+
+if (refreshToken) {
+  try {
+    const tokenRes = await refreshGoogleAccessToken(refreshToken);
+    accessToken = tokenRes?.access_token || null;
+  } catch (err) {
+    console.warn("⚠️ Failed to refresh Google token:", err.message);
+    accessToken = null;
+  }
+}
 
   // ------------------------------------
   // 2️⃣ GOOGLE SEARCH CONSOLE DATA
   // ------------------------------------
+
+let rows = [];
+let gscAvailable = false;
+
+if (accessToken) {
+  try {
     const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
       siteUrl
     )}/searchAnalytics/query`;
@@ -391,25 +406,31 @@ exports.getGSCDataAndSEOOverview = async ({
     }
   );
 
-  const rows = gscRes.data.rows || [];
+   rows = gscRes.data.rows || [];
+   gscAvailable = true;
 
-  const totalClicks = rows.reduce((s, r) => s + r.clicks, 0);
-  const totalImpressions = rows.reduce((s, r) => s + r.impressions, 0);
+    } catch (err) {
+    console.warn("⚠️ GSC request failed:", err?.response?.data || err.message);
+    rows = [];
+  }
+}
+  const totalClicks = rows.reduce((s, r) => s + r?.clicks, 0);
+  const totalImpressions = rows.reduce((s, r) => s + r?.impressions, 0);
 
   const avgCTR =
-    rows.reduce((s, r) => s + r.ctr * r.impressions, 0) /
+    rows.reduce((s, r) => s + r?.ctr * r?.impressions, 0) /
     (totalImpressions || 1);
 
   const avgPosition =
-    rows.reduce((s, r) => s + r.position * r.impressions, 0) /
+    rows.reduce((s, r) => s + r?.position * r?.impressions, 0) /
     (totalImpressions || 1);
 
   const lowCTRKeywords = rows.filter(
-    r => r.impressions > 1000 && r.ctr < 0.01 && r.position <= 10
+    r => r.impressions > 1000 && r?.ctr < 0.01 && r?.position <= 10
   );
 
   const nearTop10Keywords = rows.filter(
-    r => r.position >= 4 && r.position <= 10
+    r => r?.position >= 4 && r?.position <= 10
   );
 
   // ------------------------------------

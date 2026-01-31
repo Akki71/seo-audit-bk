@@ -7,7 +7,7 @@ router.post('/getUrl',authenticateToken,userController.getUrl);
 // router.get("/analytics/accounts", authenticateToken, getGAAccounts);
 
 router.get('/generatePdf',authenticateToken, userController.generatePdf);
-router.post('/getLLMResponse', userController.getLLMResponse);
+// router.post('/getLLMResponse', userController.getLLMResponse);
 router.get('/generatePageData',authenticateToken,userController.generatePageData);
 
 

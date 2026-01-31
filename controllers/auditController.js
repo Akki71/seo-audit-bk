@@ -21,502 +21,17 @@ const {
   getGSCSeoData,
   getGSCDataAndSEOOverview,
 } = require("../middlewares/google");
-const { analyzeSeoIssues } = require("../middlewares/seoIssueAnalyzer");
-const { calculateScores } = require("../middlewares/seoScoreCalculator");
 const zlib = require("zlib");
-const getDomainAuthority = require("../utils/getDomainAuthority");
 
-const finalAuditJson = {
-  totals: {
-    pages: 10,
-    missing_title: 0,
-    missing_meta: 0,
-    missing_h1: 0,
-    recommendations_count: 0,
-    images_missing_alt: 89,
-    broken_links: 0,
-  },
-  overview: {
-    seo_grade: "A+",
-    recommendations_count: 0,
-    summary_text:
-      "Excellent SEO health. Your website is highly optimized and follows best practices. Maintain consistency and monitor performance regularly.",
-  },
-  technical_fixes: {
-    schema_codes_found: true,
-    schema_note: "10 pages contain structured data markup",
-    sitemap_present: true,
-    sitemap_url: "https://gulfpharmacy.com/sitemap.xml",
-    robots_txt_present: true,
-    sitemap_and_robots_note: null,
-  },
-  ssl_security: {
-    https_supported: true,
-    certificate_valid: true,
-    trusted: true,
-    final_url: "https://gulfpharmacy.com/",
-    note: "SSL is properly configured. Secure HTTPS improves user trust, protects data transmission, and is a confirmed Google ranking factor.",
-    page: 17,
-  },
-  title_optimization: {
-    duplicate_count: 0,
-    titles_below_30: 0,
-    titles_over_60: 9,
-    max_title_length: 100,
-    max_length_title:
-      "Gulf Pharmacy Dubai | Get Up To 70% Off + Free Delivery On Pharmacy & Wellness Products Across Dubai",
-  },
-  header_optimization: {
-    h1: {
-      missing: 0,
-      duplicate: 0,
-      multiple: 0,
-      over_70_characters: 0,
-    },
-    h2: {
-      missing: 0,
-      duplicate: 0,
-      multiple: 10,
-      over_70_characters: 0,
-    },
-    note: "Proper heading hierarchy improves accessibility, keyword relevance, and search rankings.",
-  },
-  meta_description_optimization: {
-    missing_descriptions_count: 0,
-    note: "Optimize meta descriptions using targeted keywords to improve click-through rate.",
-  },
-  url_optimization: {
-    issues_list: [],
-    page: 11,
-  },
-  image_optimization: {
-    images_over_100kb: null,
-    missing_size_attributes: 164,
-    missing_alt_text_count: 89,
-    image_metadata_note:
-      "Images should be optimized with descriptive alt text and appropriate sizing.",
-    page: 10,
-  },
-  overview_scores: {
-    on_page: "A+",
-    links: "F",
-    usability: "A",
-    performance: "F",
-    social: "C",
-    page: 2,
-  },
-  security: {
-    ssl_enabled: true,
-  },
-  page_speed: {
-    mobile: {
-      performance_score: 13,
-      fcp: 8586.558555036077,
-      lcp: 26863.751283181573,
-      cls: 0.7304616074272434,
-      tbt: 776.5,
-      ttfb: 269,
-      speed_index: 16416.27197206219,
-    },
-    desktop: {
-      performance_score: 10,
-      fcp: 2144.695927048868,
-      lcp: 4539.520772073192,
-      cls: 0.8892004752067574,
-      tbt: 731.9999999999995,
-      ttfb: 332,
-      speed_index: 6274.524352376229,
-    },
-  },
-  domain_analysis: {
-    authority_score: null,
-    organic_traffic: 6862,
-    paid_traffic: 0,
-    referring_domains: 0,
-    backlinks: 0,
-    organic_keywords: 10,
-    traffic_share: 0,
-  },
-  backlink_profile: {
-    total_backlinks: 0,
-    referring_domains: 0,
-    distribution: {
-      text: 0,
-      image: 0,
-      form: 0,
-      frame: 0,
-    },
-  },
-  redirects: {
-    total_redirects: 0,
-    redirect_urls: [],
-    note: "No redirect issues detected. All URLs resolve directly without unnecessary redirects.",
-    page: 9,
-  },
-  security_checks: {
-    https_enabled: true,
-    certificate_valid: true,
-    not_expired: true,
-    trusted: true,
-    secure_hash: true,
-  },
-  schema_validation: {
-    total_pages_with_schema: 10,
-    pages_missing_schema: 0,
-    rich_results_detected: true,
-  },
-  social_links: {
-    facebook: ["https://www.facebook.com/GulfPharmacy1/"],
-    instagram: ["https://www.instagram.com/gulfpharmacydubai"],
-    twitter: ["https://x.com/GulfPharmacy"],
-    linkedin: [
-      "https://www.linkedin.com/company/gulf-pharmacy/?originalSubdomain=ae",
-    ],
-    youtube: [],
-  },
-  trending_keywords: {
-    rows: [
-      {
-        name: "gulf pharmacy",
-        clicks: 573,
-        impressions: 5603,
-        avgPosition: 0,
-        ctr: 10.23,
-        percent: "8.4",
-      },
-      {
-        name: "panadol cold and flu",
-        clicks: 257,
-        impressions: 94377,
-        avgPosition: 0,
-        ctr: 0.27,
-        percent: "3.7",
-      },
-      {
-        name: "gulf pharmacy dubai",
-        clicks: 96,
-        impressions: 537,
-        avgPosition: 0,
-        ctr: 17.88,
-        percent: "1.4",
-      },
-      {
-        name: "microsynergy pharmaceuticals fzco",
-        clicks: 51,
-        impressions: 1606,
-        avgPosition: 0,
-        ctr: 3.18,
-        percent: "0.7",
-      },
-      {
-        name: "daktarin cream",
-        clicks: 34,
-        impressions: 1968,
-        avgPosition: 0,
-        ctr: 1.73,
-        percent: "0.5",
-      },
-      {
-        name: "salibet ointment",
-        clicks: 25,
-        impressions: 3318,
-        avgPosition: 0,
-        ctr: 0.75,
-        percent: "0.4",
-      },
-      {
-        name: "gulfpharmacy",
-        clicks: 23,
-        impressions: 85,
-        avgPosition: 0,
-        ctr: 27.06,
-        percent: "0.3",
-      },
-      {
-        name: "fresubin 2kcal",
-        clicks: 22,
-        impressions: 689,
-        avgPosition: 0,
-        ctr: 3.19,
-        percent: "0.3",
-      },
-      {
-        name: "alkacure",
-        clicks: 21,
-        impressions: 1227,
-        avgPosition: 0,
-        ctr: 1.71,
-        percent: "0.3",
-      },
-      {
-        name: "annora pharma fz-llc",
-        clicks: 21,
-        impressions: 291,
-        avgPosition: 0,
-        ctr: 7.22,
-        percent: "0.3",
-      },
-    ],
-  },
-  trending_urls: {
-    rows: [
-      {
-        url: "https://gulfpharmacy.com/",
-        impressions: 89389,
-        clicks: 1378,
-        percent: "7.9",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/over-the-counter-medicines/p/panadol-cold-flu-night-tablets-pack-of-24",
-        impressions: 147120,
-        clicks: 383,
-        percent: "13.0",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/mother-and-baby/p/salibet-reduce-skin-allergy-ointment-30-g",
-        impressions: 29369,
-        clicks: 194,
-        percent: "2.6",
-      },
-      {
-        url: "https://gulfpharmacy.com/brand/annora-pharma-fz-llc",
-        impressions: 4341,
-        clicks: 164,
-        percent: "0.4",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/over-the-counter-medicines/p/daktarin-cream-30g",
-        impressions: 8330,
-        clicks: 109,
-        percent: "0.7",
-      },
-      {
-        url: "https://gulfpharmacy.com/brand/microsynergy-pharmaceuticals-fzco",
-        impressions: 3397,
-        clicks: 104,
-        percent: "0.3",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/otc-medicines-kids/p/zentel-oral-suspension-20-ml",
-        impressions: 12393,
-        clicks: 91,
-        percent: "1.1",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/nutrition-supplements/p/fresubin-2kcal-drink-vanilla-200ml",
-        impressions: 2495,
-        clicks: 85,
-        percent: "0.2",
-      },
-      {
-        url: "https://gulfpharmacy.com/c/otc-medicines-kids/s/deworming",
-        impressions: 6644,
-        clicks: 76,
-        percent: "0.6",
-      },
-      {
-        url: "https://gulfpharmacy.com/contact-us",
-        impressions: 30936,
-        clicks: 71,
-        percent: "2.7",
-      },
-    ],
-  },
-  google_analytics: {
-    google_analytics_found: true,
-    summary: {
-      sessions: 15387,
-      pageviews: 20733,
-      avg_session_duration_minutes: 1.15,
-      bounce_rate_percent: 47.87,
-      conversion_rate_percent: 0.2,
-      total_conversions: 33,
-    },
-  },
-  google_search_console: {
-    google_search_console_found: true,
-    summary: {
-      clicks: 6862,
-      impressions: 1129631,
-      ctr: 0.61,
-      avg_position: 10.689431327575111,
-    },
-  },
-  ga_present: true,
-  gsc_present: true,
-  googleServicesFromPages: {
-    google_analytics: false,
-    google_search_console: true,
-    google_my_business: false,
-  },
-  document_title: "https://gulfpharmacy.com/",
-  basic_setup: {
-    google_analytics_found: true,
-    google_search_console_found: true,
-    google_search_console_note: "GSC data available for analysis",
-    google_my_business_found: false,
-    page: 3,
-  },
-  broken_links: {
-    contains_broken_links: false,
-    rows: [],
-    page: 12,
-  },
-  top_priority_action_plan: {
-    week_1_technical: [
-      "Submit sitemap.xml in Google Search Console and validate index coverage.",
-      "Ensure all pages are served over HTTPS to improve security.",
-      "Check and optimize page speed to improve user experience.",
-      "Validate structured data markup on all pages.",
-      "Review and fix any potential crawlability issues.",
-    ],
-    week_2_on_page: [
-      "Optimize titles over 60 characters for better search visibility.",
-      "Ensure all images have descriptive alt text.",
-      "Review and improve meta descriptions to enhance CTR.",
-      "Check for any missing or duplicate H1 tags.",
-      "Enhance URL readability for better user experience.",
-    ],
-    week_3_content_internal_links: [
-      "Identify and expand content on pages with low impressions.",
-      "Add internal links from high-traffic pages to underperforming pages.",
-      "Optimize anchor text for better keyword relevance.",
-      "Review top-performing pages and scale content strategies.",
-      "Strengthen thin content to improve engagement.",
-    ],
-    week_4_measurement: [
-      "Configure GA conversion tracking for primary lead form.",
-      "Monitor GSC indexing and validate any issues.",
-      "Set up performance monitoring dashboards.",
-      "Track ranking changes for targeted keywords.",
-      "Benchmark monthly performance metrics for growth analysis.",
-    ],
-    page: 14,
-  },
-  graph_data: {
-    seo_health_score: 0,
-    seo_health_breakdown: {
-      on_page: 0,
-      content: 0,
-      internal_links: 0,
-      technical: 0,
-    },
-    seo_performance_score: 0,
-    performance_metrics: {
-      impressions: 1129631,
-      clicks: 6862,
-      ctr: 0.61,
-      avg_position: 10.689431327575111,
-    },
-    page: 15,
-  },
-  voice_search: {
-    faq_present: false,
-    optimized: false,
-    page: 30,
-  },
-  mobile_usability: {
-    viewport_ok: true,
-    tap_targets_ok: true,
-    responsive: true,
-    page: 31,
-  },
-  competitors: [
-    {
-      name: "Competitor A",
-      traffic: 1200,
-      backlinks: 340,
-    },
-    {
-      name: "Competitor B",
-      traffic: 890,
-      backlinks: 210,
-    },
-  ],
-  llm_visibility: {
-    entity_ready: false,
-    schema_ready: false,
-    brand_mentions: 0,
-    page: 34,
-  },
-  keyword_strategy: [
-    "Focus on 'gulf pharmacy' to leverage high CTR and impressions.",
-    "Optimize for 'panadol cold and flu' due to high impressions.",
-    "Enhance visibility for 'gulf pharmacy dubai' with high CTR.",
-    "Target 'daktarin cream' for improved search presence.",
-    "Explore opportunities with 'salibet ointment' for better reach.",
-  ],
-  content_strategy: [
-    "Expand content on low-impression pages to increase visibility.",
-    "Create detailed guides on popular products like 'panadol cold and flu'.",
-    "Develop content around 'gulf pharmacy dubai' to capture local searches.",
-    "Enhance product descriptions for 'daktarin cream' to improve engagement.",
-    "Leverage high CTR keywords for content expansion.",
-  ],
-  roadmap: [
-    "Implement structured data across all pages to enhance search visibility.",
-    "Optimize page speed to improve user experience and rankings.",
-    "Enhance internal linking to distribute page authority effectively.",
-    "Focus on content expansion for low-performing pages.",
-    "Regularly monitor and adjust SEO strategies based on performance data.",
-  ],
-  three_main_search_ranking_factors: {
-    factors: [
-      "Page speed optimization to improve user experience and rankings.",
-      "Structured data implementation to enhance search visibility.",
-      "Internal linking strategy to distribute page authority effectively.",
-    ],
-    page: 37,
-  },
-  content_wise_study: {
-    insights: [
-      "Titles over 60 characters need optimization for better search visibility.",
-      "Structured data is present but requires regular validation.",
-      "Internal linking can be improved to enhance page authority distribution.",
-      "Meta descriptions are well-optimized but can be further enhanced.",
-      "Image alt text is missing on several images, impacting accessibility.",
-    ],
-    page: 38,
-  },
-  activities_required: {
-    actions: [
-      "Submit sitemap.xml in Google Search Console.",
-      "Optimize titles exceeding 60 characters.",
-      "Ensure all images have descriptive alt text.",
-      "Validate structured data markup on all pages.",
-      "Monitor GSC indexing and validate any issues.",
-      "Enhance internal linking from high-traffic pages.",
-      "Configure GA conversion tracking for primary lead form.",
-      "Regularly monitor and adjust SEO strategies based on performance data.",
-    ],
-    page: 39,
-  },
-  seoAuthority: {
-    organicTraffic: 2594,
-    paidTraffic: 0,
-    impressions: 331873,
-    ctr: 0.78,
-    avgPosition: 5.19,
-    organicKeywords: 1000,
-    domainAuthority: 11,
-    pageAuthority: 23,
-    spamScore: 3,
-  },
-  seo_links: {
-    referringDomains: 46,
-    backlinks: 116,
-    totalBacklinks: 3349315,
-    backlinkTypes: {
-      dofollow: 51,
-      nofollow: 65,
-      redirect: 2,
-    },
-  },
-  opportunities: {
-    lowCTRKeywords: 50,
-    nearTop10Keywords: 471,
-  },
-};
+const xml2js = require("xml2js");
+const { runSerp } = require("../routes/getSurpData");
+const { getLLMResponse } = require("../utils/getLLMData");
+
+const parser = new xml2js.Parser({ trim: true });
+
+const VISITED_SITEMAPS = new Set();
+const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
+
 
 async function extractUrls(pageUrl) {
   const { data: html, request } = await axios.get(pageUrl, {
@@ -882,12 +397,21 @@ function renderAuditJsonToHtml(data) {
       </div>
     `;
   };
-
+const hasValidMetrics = (obj) =>
+  obj &&
+  Object.values(obj).some(
+    v => v !== null && v !== undefined && v !== "" && v !== 0
+  );
   const overview = data.overview || {};
   const scores = data.overview_scores || {};
   const graph = data.graph_data || {};
   const urlOpt = data.url_optimization || {};
   const action = data.top_priority_action_plan || {};
+const hasGASummary = hasValidMetrics(ga?.summary);
+const hasGSCSummary = hasValidMetrics(gsc?.summary);
+
+const hasGMB = Boolean(basic?.google_my_business_found);
+
 
   const renderUrlIssues = (issues = []) =>
     !issues.length
@@ -1670,6 +1194,33 @@ img {
 .tech-status.fail {
   background: #fee2e2;
   color: #991b1b;
+}
+.tool-summary-info {
+  background: #f9fbff;
+  border: 1px dashed #d6e0f5;
+}
+
+.tool-summary-description p {
+  margin: 6px 0;
+  color: #4a5568;
+  font-size: 14px;
+}
+
+.tool-summary-benefits {
+  margin: 10px 0;
+  padding-left: 18px;
+}
+
+.tool-summary-benefits li {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.tool-summary-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #2563eb;
+  font-weight: 500;
 }
 
 /* ----------- SUMMARY CARD ----------- */
@@ -3006,12 +2557,44 @@ img {
 
       <h3>Traffic & User Analytics</h3>
 
-      <div class="tool-status ${basic.google_analytics_found ? "success" : "warning"}">
-        ${basic.google_analytics_found ? "Connected" : "Not Connected"}
+      <div class="tool-status ${data.googleServicesFromPages.google_analytics || basic.google_analytics_found ? "success" : "warning"}">
+        ${data.googleServicesFromPages.google_analytics || basic.google_analytics_found ? "Connected" : "Not Connected"}
       </div>
     </div>
 
     <!-- RIGHT SUMMARY -->
+${!hasGASummary ? `
+  <div class="tool-summary tool-summary-info">
+
+    <div class="tool-summary-title">
+      Traffic & User Analytics
+    </div>
+
+    <div class="tool-summary-description">
+      <p>
+        <b>Google Analytics (GA)</b> helps you understand how visitors find and use your website.
+        It tracks traffic sources, user behavior, engagement, and conversions.
+      </p>
+
+      <p>
+        Connecting GA gives you valuable insights into what’s working, what’s not,
+        and where to focus your SEO and marketing efforts.
+      </p>
+
+      <ul class="tool-summary-benefits">
+        <li>📈 Measure website traffic and growth</li>
+        <li>🧭 Understand visitor behavior and engagement</li>
+        <li>🎯 Track conversions and goals</li>
+        <li>🔍 Improve SEO, UX, and content performance</li>
+      </ul>
+
+      <div class="tool-summary-hint">
+        Connect Google Analytics to unlock traffic insights for this website.
+      </div>
+    </div>
+
+  </div>
+` : `
     <div class="tool-summary">
 
       <div class="tool-summary-title">Analytics Summary</div>
@@ -3024,7 +2607,7 @@ img {
         <div class="tool-summary-item">Conversions: <b>${safe(ga?.summary?.total_conversions)}</b></div>
       </div>
 
-    </div>
+    </div>`}
 
   </div>
 
@@ -3045,24 +2628,68 @@ img {
 
       <h3>Search Visibility & Indexing</h3>
 
-      <div class="tool-status ${basic.google_search_console_found ? "success" : "warning"}">
-        ${basic.google_search_console_found ? "Connected" : "Not Connected"}
+      <div class="tool-status ${data.googleServicesFromPages.google_search_console || basic.google_search_console_found ? "success" : "warning"}">
+        ${data.googleServicesFromPages.google_search_console || basic.google_search_console_found ? "Connected" : "Not Connected"}
       </div>
     </div>
 
     <!-- RIGHT SUMMARY -->
-    <div class="tool-summary">
+${hasGSCSummary ? `
+  <div class="tool-summary">
 
-      <div class="tool-summary-title">Search Performance Summary</div>
-
-      <div class="tool-summary-grid">
-        <div class="tool-summary-item">Clicks: <b>${safe(gsc?.summary?.clicks)}</b></div>
-        <div class="tool-summary-item">Impressions: <b>${safe(gsc?.summary?.impressions)}</b></div>
-        <div class="tool-summary-item">CTR: <b>${safe(gsc?.summary?.ctr)}%</b></div>
-        <div class="tool-summary-item">Avg Position: <b>${safe(gsc?.summary?.avg_position)}</b></div>
-      </div>
-
+    <div class="tool-summary-title">
+      Search Performance Summary
     </div>
+
+    <div class="tool-summary-grid">
+      <div class="tool-summary-item">
+        Clicks: <b>${gsc.summary.clicks}</b>
+      </div>
+      <div class="tool-summary-item">
+        Impressions: <b>${gsc.summary.impressions}</b>
+      </div>
+      <div class="tool-summary-item">
+        CTR: <b>${gsc.summary.ctr}%</b>
+      </div>
+      <div class="tool-summary-item">
+        Avg Position: <b>${gsc.summary.avg_position}</b>
+      </div>
+    </div>
+
+  </div>
+` : `
+  <div class="tool-summary tool-summary-info">
+
+    <div class="tool-summary-title">
+      Google Search Console
+    </div>
+
+    <div class="tool-summary-description">
+      <p>
+        <b>Google Search Console (GSC)</b> shows how your website appears in Google Search
+        and how users interact with your listings.
+      </p>
+
+      <p>
+        It provides critical SEO insights such as search queries, impressions,
+        click-through rate, and average ranking position.
+      </p>
+
+      <ul class="tool-summary-benefits">
+        <li>🔎 Discover keywords your site ranks for</li>
+        <li>📊 Track clicks, impressions, and CTR</li>
+        <li>📈 Improve rankings and search visibility</li>
+        <li>⚠️ Monitor indexing and search issues</li>
+      </ul>
+
+      <div class="tool-summary-hint">
+        Connect Google Search Console to unlock search performance insights.
+      </div>
+    </div>
+
+  </div>
+`}
+
 
   </div>
 
@@ -3083,24 +2710,68 @@ img {
 
       <h3>Local Business Presence</h3>
 
-      <div class="tool-status ${basic.google_my_business_found ? "success" : "warning"}">
-        ${basic.google_my_business_found ? "Profile Active" : "Profile Missing"}
+      <div class="tool-status ${data.googleServicesFromPages.google_my_business || basic.google_my_business_found ? "success" : "warning"}">
+        ${data.googleServicesFromPages.google_my_business || basic.google_my_business_found ? "Profile Active" : "Profile Missing"}
       </div>
     </div>
 
     <!-- RIGHT SUMMARY -->
-    <div class="tool-summary">
+    ${hasGMB ? `
+  <div class="tool-summary">
 
-      <div class="tool-summary-title">Business Visibility Summary</div>
-
-      <div class="tool-summary-grid">
-        <div class="tool-summary-item">Profile Active: <b>${bool(basic.google_my_business_found)}</b></div>
-        <div class="tool-summary-item">Local Search Ready: <b>${bool(basic.google_my_business_found)}</b></div>
-        <div class="tool-summary-item">Maps Visibility: <b>${bool(basic.google_my_business_found)}</b></div>
-        <div class="tool-summary-item">Trust Signals: <b>Medium</b></div>
-      </div>
-
+    <div class="tool-summary-title">
+      Business Visibility Summary
     </div>
+
+    <div class="tool-summary-grid">
+      <div class="tool-summary-item">
+        Profile Active: <b>Yes</b>
+      </div>
+      <div class="tool-summary-item">
+        Local Search Ready: <b>Yes</b>
+      </div>
+      <div class="tool-summary-item">
+        Maps Visibility: <b>Yes</b>
+      </div>
+      <div class="tool-summary-item">
+        Trust Signals: <b>Medium</b>
+      </div>
+    </div>
+
+  </div>
+` : `
+  <div class="tool-summary tool-summary-info">
+
+    <div class="tool-summary-title">
+      Google My Business
+    </div>
+
+    <div class="tool-summary-description">
+      <p>
+        <b>Google My Business (GMB)</b> helps your business appear in local search results
+        and on Google Maps when customers search for services near them.
+      </p>
+
+      <p>
+        An optimized GMB profile increases local visibility, trust, and customer engagement,
+        especially for location-based businesses.
+      </p>
+
+      <ul class="tool-summary-benefits">
+        <li>📍 Appear in Google Maps & local results</li>
+        <li>⭐ Build trust with reviews & ratings</li>
+        <li>📞 Get calls, visits, and directions</li>
+        <li>🏪 Improve local SEO performance</li>
+      </ul>
+
+      <div class="tool-summary-hint">
+        Claim and optimize your Google My Business profile to improve local visibility.
+      </div>
+    </div>
+
+  </div>
+`}
+
 
   </div>
 
@@ -3130,7 +2801,7 @@ img {
  
   </div>
 </div>
-<!-- PAGE 8 : SCHEMA CODES -->
+
 <!-- PAGE 8 : SCHEMA CODES -->
 <div class="section">
 
@@ -3202,6 +2873,121 @@ img {
 </div>
 
 
+<!-- PAGE : AI SEARCH VISIBILITY -->
+<div class="section">
+
+  <div class="page-header">
+    <div class="bar"></div>
+    <h2>AI Search – Visibility & Mentions</h2>
+  </div>
+
+  <div class="schema-tool">
+
+    <!-- LEFT VISUAL -->
+    <div class="schema-visual">
+      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" />
+
+      <h3>AI Search Detection</h3>
+
+      <div class="schema-status ${
+        data?.ai_search?.cited_pages > 0 ? "ok" : "fail"
+      }">
+        ${
+          data?.ai_search?.cited_pages > 0
+            ? "AI Presence Detected"
+            : "No AI Presence"
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT SUMMARY -->
+    <div class="schema-summary">
+
+      <div class="schema-summary-title">
+        AI Search Summary
+        <span style="float:right;font-size:12px;color:#666;">
+          Today · ${new Date().toLocaleDateString()}
+        </span>
+      </div>
+
+      <div class="schema-grid">
+        <div class="schema-item">
+          AI Visibility Score:
+          <b>${data?.ai_search?.visibility ?? 0}</b>
+        </div>
+
+        <div class="schema-item">
+          Total Mentions:
+          <b>${data?.ai_search?.mentions ?? 0}</b>
+        </div>
+
+        <div class="schema-item">
+          Cited Pages:
+          <b>${data?.ai_search?.cited_pages ?? 0}</b>
+        </div>
+
+        <div class="schema-item">
+          AI Readiness:
+          <b>${data?.ai_search?.cited_pages > 0 ? "Indexed by AI" : "Not Indexed"}</b>
+        </div>
+      </div>
+
+      <!-- AI SOURCES -->
+      <div class="schema-grid" style="margin-top:12px;">
+
+        <!-- ChatGPT -->
+        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+          <img src="https://www.google.com/s2/favicons?domain=chatgpt.com" width="16" height="16" />
+          ChatGPT:
+          <b>
+            ${data?.ai_search?.sources?.find(s => s.source === "chatgpt")?.mentions ?? 0}
+            mentions ·
+            ${data?.ai_search?.sources?.find(s => s.source === "chatgpt")?.citedPages ?? 0}
+            pages
+          </b>
+        </div>
+
+        <!-- Gemini -->
+        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+          <img src="https://www.google.com/s2/favicons?domain=gemini.google.com" width="16" height="16" />
+          Gemini:
+          <b>
+            ${data?.ai_search?.sources?.find(s => s.source === "gemini")?.mentions ?? 0}
+            mentions ·
+            ${data?.ai_search?.sources?.find(s => s.source === "gemini")?.citedPages ?? 0}
+            pages
+          </b>
+        </div>
+
+        <!-- SERP / Google -->
+        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+          <img src="https://www.google.com/s2/favicons?domain=google.com" width="16" height="16" />
+          Google (SERP):
+          <b>
+            ${data?.ai_search?.sources?.find(s => s.source === "serp")?.mentions ?? 0}
+            mentions ·
+            ${data?.ai_search?.sources?.find(s => s.source === "serp")?.citedPages ?? 0}
+            pages
+          </b>
+        </div>
+
+      </div>
+
+      <!-- Recommendation -->
+      <div class="schema-recommendation">
+        <b>Recommendation:</b>
+        ${
+          data?.ai_search?.cited_pages > 0
+            ? "Continue strengthening entity signals, structured data, and authoritative content to maintain AI visibility."
+            : "Improve AI discoverability by adding structured data, strengthening topical authority, and publishing AI-readable content."
+        }
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 
 <!-- PAGE : REDIRECT URL REPORT -->
 <div class="section">
@@ -4254,7 +4040,9 @@ img {
 
  
 <!-- PAGE 23 : SEO PERFORMANCE -->
-
+${
+  gsc_present &&
+  `
 <div class="section">
 
   <div class="page-header">
@@ -4376,7 +4164,8 @@ img {
   </div>
 </div>
 
-
+ `
+}
 
  
  
@@ -4845,52 +4634,101 @@ ${
 `;
 }
 
-function gradeOnPage(facts) {
-  const ratio =
-    facts.totals.recommendations_count / (facts.totals.pages * 3 || 1);
+function gradeOnPage(pages) {
+  const checksPerPage = 6;
+  let score = 0;
 
-  if (ratio <= 0.05) return "A+";
-  if (ratio <= 0.15) return "A";
-  if (ratio <= 0.3) return "B";
-  if (ratio <= 0.5) return "C";
-  if (ratio <= 0.7) return "D+";
+  pages.forEach(p => {
+    const d = p.data || {};
+    if (d.title) score++;
+    if (d.meta_description) score++;
+    if (d.h1_count > 0) score++;
+    if (d.canonical) score++;
+    if (d.schemaCount > 0) score++;
+    if (d.h2_count > 0) score++;
+  });
+
+  const maxScore = pages.length * checksPerPage;
+  const ratio = score / maxScore;
+
+  if (ratio >= 0.9) return "A";
+  if (ratio >= 0.75) return "B";
+  if (ratio >= 0.6) return "C";
+  if (ratio >= 0.4) return "D";
   return "F";
 }
 
-function gradeLinks(gsc) {
-  if (!gsc?.links?.total) return "F";
-  if (gsc.links.total > 1000) return "A";
-  if (gsc.links.total > 300) return "B";
-  if (gsc.links.total > 50) return "C";
-  return "D";
+function gradeLinks(pages) {
+  if (!Array.isArray(pages) || pages.length === 0) return "D";
+
+  const totalLinks = pages.reduce(
+    (sum, p) => sum + (p?.data?.internalLinks?.length || 0),
+    0
+  );
+
+  const avgLinks = totalLinks / pages.length;
+
+  if (avgLinks >= 20) return "A";
+  if (avgLinks >= 12) return "B";
+  if (avgLinks >= 6) return "C";
+  if (avgLinks >= 3) return "D";
+  return "F";
 }
 
 function gradeUsability(pages) {
-  const mobileIssues = pages.filter((p) => p.data?.viewport_missing).length;
+  if (!pages.length) return "F";
 
-  if (mobileIssues === 0) return "A";
-  if (mobileIssues < pages.length * 0.2) return "B";
-  if (mobileIssues < pages.length * 0.5) return "C";
+  const mobileIssues = pages.filter(
+    p => p.data?.viewport_missing
+  ).length;
+
+  const ratio = mobileIssues / pages.length;
+
+  if (ratio === 0) return "A";
+  if (ratio <= 0.2) return "B";
+  if (ratio <= 0.5) return "C";
   return "F";
 }
 
-function gradePerformance(psi) {
-  if (!psi?.performance_score) return "F";
-  if (psi.performance_score >= 90) return "A";
-  if (psi.performance_score >= 70) return "B";
-  if (psi.performance_score >= 50) return "C";
-  return "D";
+function gradePerformance(pageSpeed) {
+  if (!pageSpeed?.mobile && !pageSpeed?.desktop) return "—";
+
+  const mobileScore = pageSpeed?.mobile?.performance_score ?? null;
+  const desktopScore = pageSpeed?.desktop?.performance_score ?? null;
+
+  // Mobile-first weighting (70% mobile, 30% desktop)
+  let finalScore;
+
+  if (mobileScore !== null && desktopScore !== null) {
+    finalScore = mobileScore * 0.7 + desktopScore * 0.3;
+  } else {
+    finalScore = mobileScore ?? desktopScore;
+  }
+
+  if (finalScore >= 90) return "A";
+  if (finalScore >= 75) return "B";
+  if (finalScore >= 60) return "C";
+  if (finalScore >= 40) return "D";
+  return "F";
 }
 
 function gradeSocial(pages) {
-  const hasSocial = pages.some((p) =>
-    p.data?.internalLinks?.some((l) =>
-      /facebook|twitter|linkedin|instagram/.test(l),
-    ),
-  );
+  const platforms = new Set();
 
-  return hasSocial ? "C" : "F";
+  pages.forEach(p => {
+    const s = p.data?.social_links || {};
+    Object.keys(s).forEach(k => {
+      if (s[k]?.length) platforms.add(k);
+    });
+  });
+
+  if (platforms.size >= 4) return "A";
+  if (platforms.size >= 3) return "B";
+  if (platforms.size >= 2) return "C";
+  if (platforms.size >= 1) return "D";
+  return "F";
 }
+
 function formatMsToMinOrSec(ms) {
   if (!ms || ms < 0) return "0 sec";
 
@@ -5243,6 +5081,8 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
     ),
   };
 
+
+
   return {
     totals: {
       pages: totalPages,
@@ -5327,12 +5167,13 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
     },
 
     overview_scores: {
-      // on_page_seo: gradeOnPage(auditFacts),
+      on_page: gradeOnPage(pages),
       links: gradeLinks(gsc),
       usability: gradeUsability(pages),
-      performance: gradePerformance(null),
+      performance: gradePerformance(pageSpeed),
       social: gradeSocial(pages),
     },
+     
     security: {
       ssl_enabled: sslEnabled,
     },
@@ -5393,8 +5234,6 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
     googleServicesFromPages,
   };
 }
-
-const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
 
 async function fetchPageSpeed(url, strategy = "mobile") {
   try {
@@ -5480,21 +5319,16 @@ async function getUrlsFromSitemap(sitemapUrl) {
 
 exports.generatePdf = async (req, res) => {
   try {
-    // const { id } = req.query;
 
-    // const domain = await Domain.findOne({ where: { id } });
-    // if (!domain) {
-    //   return res.json({
-    //     status: false,
-    //     message: "No domain data found",
-    //   });
-    // }
     const userId = String(req.user?.id);
     // console.log("userId", userId)
 const domain = await Brand.findOne({
       where: { user_id: userId },
     });
-// return res.json(domain);
+const siteUrl =domain.domain[0]
+   const LLMData = await getLLMResponse(siteUrl)
+
+// return res.json(LLMData);
     if (!domain) {
       return res.json({
         status: false,
@@ -5555,11 +5389,11 @@ const domain = await Brand.findOne({
 
     if (domain?.domain) {
       pageSpeed = {
-        mobile: await fetchPageSpeed(domain.domain, "mobile"),
-        desktop: await fetchPageSpeed(domain.domain, "desktop"),
+        mobile: await fetchPageSpeed(siteUrl, "mobile"),
+        desktop: await fetchPageSpeed(siteUrl, "desktop"),
       };
 
-      console.log("✅ Domain PageSpeed:", domain.domain, pageSpeed);
+      console.log("✅ Domain PageSpeed:", siteUrl, pageSpeed);
     }
 
     if (!pagesData.length) {
@@ -5571,7 +5405,6 @@ const domain = await Brand.findOne({
     //     /* ------------------------------------
     //            3. Fetch GA + GSC
     //         ------------------------------------ */
-const siteUrl =domain.domain[0]
     const getdata = await getGSCDataAndSEOOverview({
       siteUrl: siteUrl,
       refreshToken: domain.gsc_refresh_token,
@@ -5714,6 +5547,7 @@ const siteUrl =domain.domain[0]
       ...auditFacts,
       ...auditJson,
       ...getdata,
+      ...LLMData
     };
 
     const finalAuditJson2 = {
@@ -5750,12 +5584,15 @@ const siteUrl =domain.domain[0]
     /* ------------------------------------
        8. Response
     ------------------------------------ */
+
     return res.json({
       success: true,
       pdfPath,
       finalAuditJson2,
       //   pages: pagesData.length,
-      //   auditJson,
+        auditJson,
+      // pageSpeed,
+      // pagesData
     });
   } catch (err) {
     console.error("❌ PDF ERROR", err);
@@ -5788,7 +5625,7 @@ function extractPureJSON(text) {
   return cleaned;
 }
 
-exports.getLLMResponse = async (req, res) => {
+exports.getLLMResponse123 = async (req, res) => {
   try {
     const { domain } = req.body;
 
@@ -5862,13 +5699,6 @@ Respond ONLY in valid JSON using this exact format:
     });
   }
 };
-
-const xml2js = require("xml2js");
-const { runSerp } = require("../routes/getSurpData");
-
-const parser = new xml2js.Parser({ trim: true });
-
-const VISITED_SITEMAPS = new Set();
 
 async function parseSitemap(sitemapUrl, collectedUrls) {
   if (VISITED_SITEMAPS.has(sitemapUrl)) return;
@@ -5988,139 +5818,6 @@ const domain = await Brand.findOne({where: {user_id: userId}});
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-// exports.getUrl = async (req, res) => {
-//   try {
-//     const { url, limit = 2000 } = req.body;
-//     const userId = req.user?.id;
-
-
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized",
-//       });
-//     }
-
-//     if (!url) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "URL is required",
-//       });
-//     }
-
-//     const brand = await Brand.findOne({
-//       where: { user_id: userId },
-//       attributes: ["id", "domain"],
-//       logging: console.log,
-//     });
-
-//     // console.log("🏷️ Brand found:", brand);
-
-//     if (!brand) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "No brand found for this user",
-//       });
-//     }
-
-//     /* ==========================
-//        🔒 HANDLE JSONB DOMAIN SAFELY
-//     ========================== */
-//     let allowedDomains = [];
-
-//     if (Array.isArray(brand.domain)) {
-//       allowedDomains = brand.domain;
-//     } else if (typeof brand.domain === "string") {
-//       allowedDomains = [brand.domain];
-//     } else if (
-//       brand.domain &&
-//       typeof brand.domain === "object"
-//     ) {
-//       allowedDomains = Object.values(brand.domain);
-//     }
-
-//     if (!allowedDomains.length) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Brand domain is not configured",
-//       });
-//     }
-
-//     const normalizedInputUrl = url.trim().replace(/\/$/, "");
-
-//     const isValidDomain = allowedDomains.some((d) => {
-//       if (typeof d !== "string") return false;
-//       return normalizedInputUrl.startsWith(
-//         d.trim().replace(/\/$/, "")
-//       );
-//     });
-
-//     if (!isValidDomain) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "URL does not belong to your brand domain",
-//       });
-//     }
-
-//     const brandId = brand.id;
-
-//     /* ==========================
-//        🗺️ FETCH URLS
-//     ========================== */
-//     let pageUrls = [];
-
-//     pageUrls = await fetchAllSitemapUrls(url);
-
-//     if (!pageUrls.length) {
-//       pageUrls = await crawlSite(url, Number(limit), 8);
-//     }
-
-//     if (!pageUrls.length) {
-//       return res.status(200).json({
-//         success: false,
-//         message: "No page URLs found",
-//       });
-//     }
-
-//     pageUrls = [...new Set(pageUrls)]
-//       .slice(0, Number(limit));
-
-//     // console.log("📄 Final URL count:", pageUrls.length);
-
-//     /* ==========================
-//        💾 SAVE URLS
-//     ========================== */
-//     const records = pageUrls.map((pageUrl) => ({
-//       user_id: userId,
-//       domainId: brandId,
-//       url: pageUrl,
-//     }));
-
-//     await Urls.bulkCreate(records, {
-//       updateOnDuplicate: ["url"],
-//       logging: console.log,
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       user_id: userId,
-//       brandId,
-//       total: pageUrls.length,
-//       data: pageUrls,
-//     });
-
-//   } catch (error) {
-//     console.error("🔥 getUrl error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error",
-//     });
-//   }
-// };
-
-
-
-
 
 exports.generatePageData = async (req, res) => {
   try {
