@@ -6157,8 +6157,8 @@ const domain = await Brand.findOne({
       });
     }
 
-    const id = domain.user_id;
-    const urls = await Urls.findAll({ where: { user_id: id } });
+    const id = domain.id;
+    const urls = await Urls.findAll({ where: { user_id: userId } });
     if (!urls.length) {
       return res.json({
         status: false,
