@@ -3,7 +3,7 @@ const { Brand, BrandGbpData, Prompt, VisibilityLog } = require("../models");
 const { google } = require("googleapis");
 const GscSnapshot = require("../models/GscSnapshot");
 const GaSnapshot = require("../models/GaSnapshot");
-
+const GaSummary = require("../models/GaSummary");
 const { refreshGoogleAccessToken } = require("../utils/googleAuth");
 const { OAuth2Client } = require("google-auth-library");
 const OpenAI = require("openai");
@@ -113,6 +113,8 @@ exports.getGoogleTokens = async (req, res) => {
 };
 //2
 exports.getGAAccounts = async (req, res) => {
+  // console.log(GaSummary);
+  
   try {
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
