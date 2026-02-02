@@ -1162,10 +1162,100 @@ exports.getSectionWiseSummary = async (req, res) => {
     });
   }
 };
+//helper to send extracted filter data from db
+async function getOverallChatbotData(user_id) {
+  console.log("🔎 getOverallChatbotData START for user:", user_id);
+
+  const brand = await Brand.findOne({
+    where: { user_id },
+    attributes: ["id", "domain"],
+  });
+
+  if (!brand) throw new Error("Brand not found");
+  console.log("✅ Brand found:", brand.id, brand.domain);
+
+  /* =========================
+     FETCH ALL GSC SNAPSHOTS
+  ========================= */
+  const gscRows = await GscSnapshot.findAll({
+    where: { brand_id: brand.id },
+    attributes: ["gsc_data"],
+    raw: true,
+  });
+
+  console.log("📦 Total GSC snapshots:", gscRows.length);
+
+  // 🔴 CRITICAL LOG
+  gscRows.forEach((row, i) => {
+    console.log(
+      `📄 Snapshot ${i + 1} topKeywords length:`,
+      row.gsc_data?.topKeywords?.length,
+    );
+  });
+
+  /* =========================
+     GROUP + SUM (UNCHANGED)
+  ========================= */
+  const groupSum = (rows, field, key) => {
+    console.log(`🔁 Aggregating field: ${field}`);
+    const map = {};
+
+    rows.forEach((r, idx) => {
+      const arr = r[field] || [];
+      console.log(`   ↳ Row ${idx + 1} ${field} length:`, arr.length);
+
+      arr.forEach((item) => {
+        const id = item[key];
+        if (!map[id]) {
+          map[id] = { ...item };
+        } else {
+          map[id].clicks = (map[id].clicks || 0) + (item.clicks || 0);
+          map[id].impressions =
+            (map[id].impressions || 0) + (item.impressions || 0);
+        }
+      });
+    });
+
+    console.log(`✅ Final ${field} count:`, Object.keys(map).length);
+    return Object.values(map);
+  };
+
+  const result = {
+    site: brand.domain,
+    gsc: {
+      topKeywords: groupSum(
+        gscRows.map((r) => r.gsc_data),
+        "topKeywords",
+        "name",
+      ),
+      topPages: groupSum(
+        gscRows.map((r) => r.gsc_data),
+        "topPages",
+        "url",
+      ),
+      devices: groupSum(
+        gscRows.map((r) => r.gsc_data),
+        "devices",
+        "device",
+      ),
+      topCountries: groupSum(
+        gscRows.map((r) => r.gsc_data),
+        "topCountries",
+        "country",
+      ),
+    },
+  };
+
+  console.log("🎯 FINAL topKeywords length:", result.gsc.topKeywords.length);
+
+  console.log("🏁 getOverallChatbotData END");
+  return result;
+}
+
 // with propt
 exports.chatbotdata = async (req, res) => {
   try {
-    const { message, chat_id, overalldata } = req.body;
+    const { message, chat_id } = req.body;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({
@@ -1173,36 +1263,23 @@ exports.chatbotdata = async (req, res) => {
         message: "Message required",
       });
     }
-
     const user_id = req.user.id;
     const chatId = chat_id || crypto.randomUUID();
-
-    /* =======================
-       🔎 GET DOMAIN FROM BRAND
-    ======================= */
     const brand = await Brand.findOne({
       where: { user_id },
       attributes: ["domain"],
     });
-
     if (!brand) {
       return res.status(404).json({
         success: false,
         message: "Brand not found for user",
       });
     }
-
     const siteName = brand.domain;
-
-    /* =======================
-       💬 THREAD LOGIC
-    ======================= */
     const previousCount = await ChatHistory.count({
       where: { chat_id: chatId, user_id },
     });
-
     let THREAD_ID;
-
     if (previousCount === 0) {
       const thread = await openaiClient.beta.threads.create();
       THREAD_ID = thread.id;
@@ -1213,43 +1290,28 @@ exports.chatbotdata = async (req, res) => {
       });
       THREAD_ID = lastRow.thread_id;
     }
-
-    /* =======================
-       🧠 SYSTEM PROMPT (ALWAYS)
-    ======================= */
+    const analyticsData = await getOverallChatbotData(user_id);
     const systemPrompt = `
-You are an AI assistant for the website: ${siteName}.
-
+You are an AI assistant for the website.
 RULES:
-1. Answer ONLY using the information provided in DATA.
-2. Do NOT use general knowledge or assumptions.
-3. Summarize information clearly if multiple pages are relevant.
-4. If medicines are mentioned:
-   - Do NOT diagnose
-   - Advise consulting a doctor if symptoms persist
-5. Include URLs when helpful.
-6. Be concise, clear, and user-friendly.
+1. Answer ONLY in plain text.
+2. Do NOT analyze or infer.
+3. Do NOT add marketing text.
+4. If arrays have items, list them.
+5. If arrays are empty, say no data found .
 `;
-
-    /* =======================
-       🧾 BUILD MESSAGE CONTENT
-    ======================= */
     const content = `
-${systemPrompt}
+                      ${systemPrompt}
 
-${
-  Array.isArray(overalldata) && overalldata.length > 0
-    ? `DATA:\n${JSON.stringify(data, null, 2)}\n`
-    : ""
-}
+                      JSON_DATA:
+                      ${JSON.stringify(analyticsData.gsc, null, 2)}
 
-User message:
-${message}
-`;
-
+                      QUESTION:
+                      ${message}
+                      `;
     /* =======================
-       📝 SAVE USER QUESTION
-    ======================= */
+                            📝 SAVE USER QUESTION
+                          ======================= */
     const row = await ChatHistory.create({
       user_id,
       chat_id: chatId,
@@ -1258,8 +1320,8 @@ ${message}
     });
 
     /* =======================
-       📤 SEND TO OPENAI
-    ======================= */
+                            📤 SEND TO OPENAI
+                          ======================= */
     await openaiClient.beta.threads.messages.create(THREAD_ID, {
       role: "user",
       content,
@@ -1280,8 +1342,8 @@ ${message}
     await row.update({ answer: reply });
 
     /* =======================
-       ✅ FINAL RESPONSE
-    ======================= */
+                            ✅ FINAL RESPONSE
+                          ======================= */
     return res.json({
       success: true,
       chat_id: chatId,
@@ -1295,6 +1357,107 @@ ${message}
     });
   }
 };
+// exports.getChatbotAnalyticsContext = async (req, res) => {
+//   try {
+//     const brand = await Brand.findOne({
+//       where: { user_id: req.user.id },
+//       attributes: ["id", "domain"],
+//     });
+
+//     if (!brand) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Brand not found",
+//       });
+//     }
+
+//     /* ===============================
+//        📊 GSC — ALL TIME (JSONB)
+//     =============================== */
+//     const [gscKPIs] = await sequelize.query(
+//       `
+//       SELECT
+//         SUM((gsc_data->'summary'->'web'->>'clicks')::numeric) AS clicks,
+//         SUM((gsc_data->'summary'->'web'->>'impressions')::numeric) AS impressions,
+//         AVG((gsc_data->'summary'->'web'->>'ctr')::numeric) AS ctr,
+//         AVG((gsc_data->'summary'->'web'->>'position')::numeric) AS position
+//       FROM gsc_snapshots
+//       WHERE brand_id = :brandId
+//       `,
+//       {
+//         replacements: { brandId: brand.id },
+//         type: sequelize.QueryTypes.SELECT,
+//       }
+//     );
+
+//     /* ===============================
+//        📈 GA — ALL TIME (JSONB)
+//     =============================== */
+//     const [gaKPIs] = await sequelize.query(
+//       `
+//       SELECT
+//         SUM((ga_data->'summary'->>'sessions')::numeric) AS sessions,
+//         SUM((ga_data->'summary'->>'users')::numeric) AS users,
+//         SUM((ga_data->'summary'->>'pageViews')::numeric) AS pageViews,
+//         AVG((ga_data->'summary'->>'bounceRate')::numeric) AS bounceRate,
+//         AVG((ga_data->'summary'->>'avgSessionDuration')::numeric) AS avgSessionDuration
+//       FROM ga_snapshots
+//       WHERE brand_id = :brandId
+//       `,
+//       {
+//         replacements: { brandId: brand.id },
+//         type: sequelize.QueryTypes.SELECT,
+//       }
+//     );
+
+//     /* ===============================
+//        🧾 LATEST SNAPSHOT (ARRAY DATA)
+//     =============================== */
+//     const latestGSC = await GscSnapshot.findOne({
+//       where: { brand_id: brand.id },
+//       order: [["end_date", "DESC"]],
+//       attributes: ["gsc_data"],
+//       raw: true,
+//     });
+
+//     const latestGA = await GaSnapshot.findOne({
+//       where: { brand_id: brand.id },
+//       order: [["end_date", "DESC"]],
+//       attributes: ["ga_data"],
+//       raw: true,
+//     });
+
+//     /* ===============================
+//        ✅ FINAL CHATBOT CONTEXT
+//     =============================== */
+//     return res.json({
+//       success: true,
+//       data: {
+//         gsc: {
+//           kpis: gscKPIs,
+//           topPages: latestGSC?.gsc_data?.topPages || [],
+//           topKeywords: latestGSC?.gsc_data?.topKeywords || [],
+//           devices: latestGSC?.gsc_data?.devices || [],
+//           countries: latestGSC?.gsc_data?.topCountries || [],
+//         },
+//         ga: {
+//           kpis: gaKPIs,
+//           topPages: latestGA?.ga_data?.topPages || [],
+//           channels: latestGA?.ga_data?.channels || [],
+//           devices: latestGA?.ga_data?.devices || [],
+//           countries: latestGA?.ga_data?.topCountries || [],
+//         },
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Chatbot analytics error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to build chatbot analytics context",
+//     });
+//   }
+// };
+
 // with prompt + sending overall dat aof gsc ,ga n web with each msg
 // exports.chatbotdata = async (req, res) => {
 //   try {
@@ -1637,7 +1800,6 @@ exports.collectAndStoreGAData = async (req, res) => {
     });
   }
 };
-
 //date_wise
 exports.getGSCGaWebDataFromDB = async (req, res) => {
   try {
@@ -1685,7 +1847,7 @@ exports.getGSCGaWebDataFromDB = async (req, res) => {
     const webpages = await Webpage.findAll({
       where: {
         user_id: req.user.id,
-        domainId: String(brand.id), 
+        domainId: String(brand.id),
       },
 
       attributes: [
@@ -2361,6 +2523,8 @@ exports.getGBPAccounts = async (req, res) => {
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
     });
+    console.log("🔵 GBP brand", brand);
+    console.log("🔵 GBP gbp_refresh_token", brand?.gbp_refresh_token);
 
     if (!brand || !brand.gbp_refresh_token) {
       return res.status(400).json({
