@@ -1,6 +1,12 @@
 const axios = require("axios");
-const GscSnapshot = require("../models/GscSnapshot");
 const { refreshGoogleAccessToken } = require("../utils/googleAuth");
+
+const GscOverallData = require("../models/GscOverallData");
+const GscSummary = require("../models/GscSummary");
+const GscDevices = require("../models/GscDevices");
+const GscTopPages = require("../models/GscTopPages");
+const GscTopKeywords = require("../models/GscTopKeywords");
+const GscTopCountries = require("../models/GscTopCountries");
 
 async function collectAndStoreGSCDataForBrand(brand) {
   if (!brand || !brand.id || !brand.user_id) {
@@ -8,26 +14,23 @@ async function collectAndStoreGSCDataForBrand(brand) {
   }
 
   const userId = brand.user_id;
-
   console.log(`🔹 GSC Service started for brand ${brand.id}`);
 
   /* =======================
      1️⃣ TOKEN
   ======================= */
   const { access_token } = await refreshGoogleAccessToken(
-    brand.gsc_refresh_token
+    brand.gsc_refresh_token,
   );
 
   const siteUrl = brand.site_url;
   const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-    siteUrl
+    siteUrl,
   )}/searchAnalytics/query`;
 
   const fetchApi = async (body) => {
     const { data } = await axios.post(apiUrl, body, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
+      headers: { Authorization: `Bearer ${access_token}` },
       timeout: 30000,
     });
     return data;
@@ -50,38 +53,43 @@ async function collectAndStoreGSCDataForBrand(brand) {
   let storedCount = 0;
 
   /* =======================
-     3️⃣ LOOP CHUNKS
+     3️⃣ LOOP DATE CHUNKS
   ======================= */
   while (current <= maxAvailableDate) {
     const start = new Date(current);
     const end = new Date(start);
     end.setDate(end.getDate() + CHUNK_SIZE - 1);
-
-    if (end > maxAvailableDate) {
-      end.setTime(maxAvailableDate.getTime());
-    }
+    if (end > maxAvailableDate) end.setTime(maxAvailableDate.getTime());
 
     const startDate = start.toISOString().split("T")[0];
     const endDate = end.toISOString().split("T")[0];
 
-    const exists = await GscSnapshot.findOne({
+    console.log(`📆 GSC RANGE: ${startDate} → ${endDate}`);
+
+    /* =======================
+       4️⃣ CREATE / GET OVERALL
+    ======================= */
+    const [overall, created] = await GscOverallData.findOrCreate({
       where: {
         brand_id: brand.id,
         start_date: startDate,
         end_date: endDate,
       },
+      defaults: {
+        user_id: userId,
+      },
     });
 
-    if (exists) {
-  //      console.log(
-  //   `⏭️ GSC snapshot exists, skipping (${startDate} → ${endDate})`
-  // );
-      current.setDate(current.getDate() + CHUNK_SIZE);
-      continue;
+    if (!created) {
+      console.log(
+        `⏭️ GSC slot already exists | Brand: ${brand.id} | ${startDate} → ${endDate} | skipped`,
+      );
     }
 
+    const gscOverallId = overall.id;
+
     /* =======================
-       4️⃣ SUMMARY
+       5️⃣ SUMMARY (FIXED)
     ======================= */
     const fetchSummary = async (searchType) => {
       const res = await fetchApi({
@@ -100,43 +108,60 @@ async function collectAndStoreGSCDataForBrand(brand) {
       };
     };
 
-    const [web, discover, news] = await Promise.all([
-      fetchSummary("web"),
-      fetchSummary("discover"),
-      fetchSummary("news"),
-    ]);
+    const web = await fetchSummary("web");
+
+    await GscSummary.upsert({
+      gsc_overall_id: gscOverallId,
+      summary_name: "web", // ✅ REQUIRED FIX
+      clicks: web.clicks,
+      impressions: web.impressions,
+      ctr: web.ctr,
+      position: web.position,
+    });
 
     /* =======================
-       5️⃣ TOP QUERIES
+       6️⃣ TOP KEYWORDS
     ======================= */
     const queryRes = await fetchApi({
       startDate,
       endDate,
       dimensions: ["query"],
-      rowLimit: 10,
+      rowLimit: 2000,
       searchType: "web",
     });
 
     const topKeywords =
       queryRes.rows?.map((r) => ({
-        name: r.keys?.[0],
+        keyword: r.keys?.[0],
         clicks: r.clicks || 0,
         impressions: r.impressions || 0,
         percent:
-          web.clicks > 0
-            ? +((r.clicks / web.clicks) * 100).toFixed(1)
-            : 0,
+          web.clicks > 0 ? +((r.clicks / web.clicks) * 100).toFixed(1) : 0,
       })) || [];
 
+    if (topKeywords.length) {
+      await GscTopKeywords.bulkCreate(
+        topKeywords.map((k) => ({
+          gsc_overall_id: gscOverallId,
+          keyword: k.keyword,
+          clicks: k.clicks,
+          impressions: k.impressions,
+          percent: k.percent,
+        })),
+        {
+          updateOnDuplicate: ["clicks", "impressions", "percent"],
+        },
+      );
+    }
+
     /* =======================
-       6️⃣ TOP PAGES
+       7️⃣ TOP PAGES
     ======================= */
     const pageRes = await fetchApi({
       startDate,
       endDate,
       dimensions: ["page"],
-      rowLimit: 10,
-      searchType: "web",
+      rowLimit: 50,
     });
 
     const topPages =
@@ -146,15 +171,28 @@ async function collectAndStoreGSCDataForBrand(brand) {
         impressions: r.impressions || 0,
       })) || [];
 
+    if (topPages.length) {
+      await GscTopPages.bulkCreate(
+        topPages.map((p) => ({
+          gsc_overall_id: gscOverallId,
+          url: p.url,
+          clicks: p.clicks,
+          impressions: p.impressions,
+        })),
+        {
+          updateOnDuplicate: ["clicks", "impressions"],
+        },
+      );
+    }
+
     /* =======================
-       7️⃣ DEVICES
+       8️⃣ DEVICES
     ======================= */
     const deviceRes = await fetchApi({
       startDate,
       endDate,
       dimensions: ["device"],
       rowLimit: 3,
-      searchType: "web",
     });
 
     const devices =
@@ -164,8 +202,22 @@ async function collectAndStoreGSCDataForBrand(brand) {
         impressions: r.impressions || 0,
       })) || [];
 
+    if (devices.length) {
+      await GscDevices.bulkCreate(
+        devices.map((d) => ({
+          gsc_overall_id: gscOverallId,
+          device: d.device,
+          clicks: d.clicks,
+          impressions: d.impressions,
+        })),
+        {
+          updateOnDuplicate: ["clicks", "impressions"],
+        },
+      );
+    }
+
     /* =======================
-       8️⃣ COUNTRIES
+       9️⃣ COUNTRIES
     ======================= */
     const countryRes = await fetchApi({
       startDate,
@@ -182,30 +234,19 @@ async function collectAndStoreGSCDataForBrand(brand) {
         impressions: r.impressions || 0,
       })) || [];
 
-    /* =======================
-       9️⃣ STORE
-    ======================= */
-    await GscSnapshot.create({
-      user_id: userId,
-      brand_id: brand.id,
-      start_date: startDate,
-      end_date: endDate,
-      gsc_data: {
-        startDate,
-        endDate,
-        summary: {
-          web,
-          discover,
-          news,
-          totalQueries: topKeywords.length,
-          totalPages: topPages.length,
+    if (topCountries.length) {
+      await GscTopCountries.bulkCreate(
+        topCountries.map((c) => ({
+          gsc_overall_id: gscOverallId,
+          country: c.country,
+          clicks: c.clicks,
+          impressions: c.impressions,
+        })),
+        {
+          updateOnDuplicate: ["clicks", "impressions"],
         },
-        topKeywords,
-        topPages,
-        topCountries,
-        devices,
-      },
-    });
+      );
+    }
 
     storedCount++;
     current.setDate(current.getDate() + CHUNK_SIZE);

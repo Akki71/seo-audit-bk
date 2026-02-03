@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GaTopPages = sequelize.define(
+  "GaTopPages",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -29,7 +29,7 @@ const GaSummary = sequelize.define(
     //   type: DataTypes.DATEONLY,
     //   allowNull: false,
     // },
-    ga_overall_id: {
+ ga_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
@@ -38,43 +38,29 @@ const GaSummary = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    total_users: {
+    path: {
+      type: DataTypes.TEXT,
+      allowNull: false, // URL path
+    },
+
+    views: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    sessions: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    page_views: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    bounce_rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
-    avg_session_duration: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "ga_top_pages",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+       fields: ["ga_overall_id", "path"],
+        name: "unique_ga_top_pages_period",
       },
     ],
-  },
+  }
 );
 
-module.exports = GaSummary;
+module.exports = GaTopPages;

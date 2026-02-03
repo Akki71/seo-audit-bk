@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GscDevices = sequelize.define(
+  "GscDevices",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -29,52 +29,44 @@ const GaSummary = sequelize.define(
     //   type: DataTypes.DATEONLY,
     //   allowNull: false,
     // },
-    ga_overall_id: {
+    gsc_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
-        model: "ga_overall_data",
+        model: "gsc_overall_data",
         key: "id",
       },
       onDelete: "CASCADE",
     },
-    total_users: {
+    device: {
+      type: DataTypes.STRING, // MOBILE | DESKTOP | TABLET
+      allowNull: false,
+    },
+
+    clicks: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      defaultValue: 0,
     },
 
-    sessions: {
+    impressions: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    page_views: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    bounce_rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
-    avg_session_duration: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      defaultValue: 0,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "gsc_devices",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+        fields: ["gsc_overall_id", "device"],
+
+        name: "unique_gsc_device_period",
       },
     ],
   },
 );
 
-module.exports = GaSummary;
+module.exports = GscDevices;

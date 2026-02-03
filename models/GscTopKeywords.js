@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GscTopKeywords = sequelize.define(
+  "GscTopKeywords",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -29,52 +29,48 @@ const GaSummary = sequelize.define(
     //   type: DataTypes.DATEONLY,
     //   allowNull: false,
     // },
-    ga_overall_id: {
+   gsc_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
-        model: "ga_overall_data",
+        model: "gsc_overall_data",
         key: "id",
       },
       onDelete: "CASCADE",
     },
-    total_users: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+    keyword: {
+      type: DataTypes.TEXT,
+      allowNull: false,
     },
 
-    sessions: {
+    clicks: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      defaultValue: 0,
     },
 
-    page_views: {
+    impressions: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      defaultValue: 0,
     },
 
-    bounce_rate: {
+    percent: {
       type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
-    avg_session_duration: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      defaultValue: 0,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "gsc_top_keywords",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+        fields: ["gsc_overall_id", "keyword"],
+        name: "unique_gsc_keyword_period",
       },
     ],
-  },
+  }
 );
 
-module.exports = GaSummary;
+module.exports = GscTopKeywords;

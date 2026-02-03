@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GaChannels = sequelize.define(
+  "GaChannels",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -38,6 +38,11 @@ const GaSummary = sequelize.define(
       },
       onDelete: "CASCADE",
     },
+    channel: {
+      type: DataTypes.STRING,
+      allowNull: false, // Direct, Organic Search, Referral, etc.
+    },
+
     total_users: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -48,33 +53,24 @@ const GaSummary = sequelize.define(
       allowNull: true,
     },
 
-    page_views: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    bounce_rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
     avg_session_duration: {
       type: DataTypes.FLOAT,
       allowNull: true,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "ga_channels",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+        fields: ["ga_overall_id", "channel"],
+        name: "unique_ga_channel_period",
       },
     ],
   },
 );
 
-module.exports = GaSummary;
+module.exports = GaChannels;

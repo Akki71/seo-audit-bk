@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GaTopCountries = sequelize.define(
+  "GaTopCountries",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -38,43 +38,29 @@ const GaSummary = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    total_users: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+    country: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
 
     sessions: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    page_views: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    bounce_rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
-    avg_session_duration: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "ga_top_countries",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+        fields: ["ga_overall_id", "country"],
+        name: "unique_ga_country_period",
       },
     ],
   },
 );
 
-module.exports = GaSummary;
+module.exports = GaTopCountries;

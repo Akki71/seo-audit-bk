@@ -7,7 +7,7 @@ const { collectAndStoreGADataForBrand } = require("../services/gaService");
 
 let isRunning = false;
 
-cron.schedule("43 15 * * *", async () => {
+cron.schedule("54 12 * * *", async () => {
   console.log("🔥 GSC + GA CRON TRIGGERED");
   console.log("🕒 Time:", new Date().toISOString());
 

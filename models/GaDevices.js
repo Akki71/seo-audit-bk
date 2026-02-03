@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GaSummary = sequelize.define(
-  "GaSummary",
+const GaDevices = sequelize.define(
+  "GaDevices",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -29,7 +29,7 @@ const GaSummary = sequelize.define(
     //   type: DataTypes.DATEONLY,
     //   allowNull: false,
     // },
-    ga_overall_id: {
+ ga_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
@@ -38,43 +38,29 @@ const GaSummary = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    total_users: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+    device: {
+      type: DataTypes.STRING,
+      allowNull: false, // desktop | mobile | tablet
     },
 
     sessions: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    page_views: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    bounce_rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
-    },
-
-    avg_session_duration: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
-    tableName: "ga_summary",
+    tableName: "ga_devices",
     timestamps: true,
     underscored: true,
+
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id"],
-        name: "unique_ga_summary_period",
+        fields: ["ga_overall_id", "device"],
+        name: "unique_ga_device_period",
       },
     ],
-  },
+  }
 );
 
-module.exports = GaSummary;
+module.exports = GaDevices;
