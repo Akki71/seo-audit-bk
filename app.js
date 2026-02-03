@@ -28,7 +28,7 @@ app.use(
     origin: function (origin, callback) {
       // Allow server-to-server calls or Postman
       if (!origin) return callback(null, true);
-
+console.log("origin", origin);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
