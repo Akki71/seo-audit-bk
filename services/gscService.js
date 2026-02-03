@@ -22,6 +22,7 @@ async function collectAndStoreGSCDataForBrand(brand) {
   const { access_token } = await refreshGoogleAccessToken(
     brand.gsc_refresh_token,
   );
+  console.log("access_tokenvvvvv", access_token);
 
   const siteUrl = brand.site_url;
   const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
@@ -132,21 +133,24 @@ async function collectAndStoreGSCDataForBrand(brand) {
 
     const topKeywords =
       queryRes.rows?.map((r) => ({
-        keyword: r.keys?.[0],
+        keys: r.keys?.[0],
         clicks: r.clicks || 0,
         impressions: r.impressions || 0,
-        percent:
-          web.clicks > 0 ? +((r.clicks / web.clicks) * 100).toFixed(1) : 0,
+        // percent:
+        //   web.clicks > 0 ? +((r.clicks / web.clicks) * 100).toFixed(1) : 0,
+        ctr: r.ctr || 0,
+        position: r.position || 0,
       })) || [];
 
     if (topKeywords.length) {
       await GscTopKeywords.bulkCreate(
         topKeywords.map((k) => ({
           gsc_overall_id: gscOverallId,
-          keyword: k.keyword,
+          keys: k.keys,
           clicks: k.clicks,
           impressions: k.impressions,
-          percent: k.percent,
+          ctr: k.ctr || 0,
+          position: k.position || 0,
         })),
         {
           updateOnDuplicate: ["clicks", "impressions", "percent"],
@@ -166,18 +170,22 @@ async function collectAndStoreGSCDataForBrand(brand) {
 
     const topPages =
       pageRes.rows?.map((r) => ({
-        url: r.keys?.[0],
+        keys: r.keys?.[0],
         clicks: r.clicks || 0,
         impressions: r.impressions || 0,
+        ctr: r.ctr || 0,
+        position: r.position || 0,
       })) || [];
 
     if (topPages.length) {
       await GscTopPages.bulkCreate(
         topPages.map((p) => ({
           gsc_overall_id: gscOverallId,
-          url: p.url,
+          keys: p.keys,
           clicks: p.clicks,
           impressions: p.impressions,
+          ctr: p.ctr,
+          position: p.position,
         })),
         {
           updateOnDuplicate: ["clicks", "impressions"],
@@ -197,21 +205,25 @@ async function collectAndStoreGSCDataForBrand(brand) {
 
     const devices =
       deviceRes.rows?.map((r) => ({
-        device: r.keys?.[0],
+        keys: r.keys?.[0],
         clicks: r.clicks || 0,
         impressions: r.impressions || 0,
+        ctr: r.ctr || 0,
+        position: r.position || 0,
       })) || [];
 
     if (devices.length) {
       await GscDevices.bulkCreate(
         devices.map((d) => ({
           gsc_overall_id: gscOverallId,
-          device: d.device,
+          keys: d.keys,
           clicks: d.clicks,
           impressions: d.impressions,
+          ctr: d.ctr,
+          position: d.position,
         })),
         {
-          updateOnDuplicate: ["clicks", "impressions"],
+          updateOnDuplicate: ["clicks", "impressions","ctr","position"],
         },
       );
     }
@@ -229,21 +241,25 @@ async function collectAndStoreGSCDataForBrand(brand) {
 
     const topCountries =
       countryRes.rows?.map((r) => ({
-        country: r.keys?.[0],
+        keys: r.keys?.[0],
         clicks: r.clicks || 0,
         impressions: r.impressions || 0,
+        ctr: r.ctr,
+        position: r.position,
       })) || [];
 
     if (topCountries.length) {
       await GscTopCountries.bulkCreate(
         topCountries.map((c) => ({
           gsc_overall_id: gscOverallId,
-          country: c.country,
+          keys: c.keys,
           clicks: c.clicks,
           impressions: c.impressions,
+          ctr: c.ctr,
+          position: c.position,
         })),
         {
-          updateOnDuplicate: ["clicks", "impressions"],
+          updateOnDuplicate: ["clicks", "impressions","ctr","position"],
         },
       );
     }

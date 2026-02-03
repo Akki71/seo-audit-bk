@@ -38,7 +38,7 @@ const GscTopPages = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    url: {
+    keys: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
@@ -52,6 +52,15 @@ const GscTopPages = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+     ctr: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+
+    position: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "gsc_top_pages",
@@ -61,7 +70,7 @@ const GscTopPages = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["gsc_overall_id", "url"],
+        fields: ["gsc_overall_id", "keys"],
 
         name: "unique_gsc_page_period",
       },

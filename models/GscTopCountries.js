@@ -38,7 +38,7 @@ const GscTopCountries = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    country: {
+    keys: {
       type: DataTypes.STRING, // ISO code: ind, usa, deu
       allowNull: false,
     },
@@ -52,6 +52,15 @@ const GscTopCountries = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+     ctr: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+
+    position: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "gsc_top_countries",
@@ -61,7 +70,7 @@ const GscTopCountries = sequelize.define(
     indexes: [
       {
         unique: true,
-          fields: ["gsc_overall_id", "country"],
+          fields: ["gsc_overall_id", "keys"],
         name: "unique_gsc_country_period",
       },
     ],

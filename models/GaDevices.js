@@ -38,7 +38,7 @@ const GaDevices = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    device: {
+    deviceCategory: {
       type: DataTypes.STRING,
       allowNull: false, // desktop | mobile | tablet
     },
@@ -56,7 +56,7 @@ const GaDevices = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id", "device"],
+        fields: ["ga_overall_id", "deviceCategory"],
         name: "unique_ga_device_period",
       },
     ],

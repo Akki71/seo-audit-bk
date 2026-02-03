@@ -29,7 +29,7 @@ const GscTopKeywords = sequelize.define(
     //   type: DataTypes.DATEONLY,
     //   allowNull: false,
     // },
-   gsc_overall_id: {
+    gsc_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
@@ -38,7 +38,7 @@ const GscTopKeywords = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    keyword: {
+    keys: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
@@ -52,11 +52,18 @@ const GscTopKeywords = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
-
-    percent: {
+    ctr: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
     },
+    position: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    // percent: {
+    //   type: DataTypes.FLOAT,
+    //   defaultValue: 0,
+    // },
   },
   {
     tableName: "gsc_top_keywords",
@@ -66,11 +73,11 @@ const GscTopKeywords = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["gsc_overall_id", "keyword"],
+        fields: ["gsc_overall_id", "keys"],
         name: "unique_gsc_keyword_period",
       },
     ],
-  }
+  },
 );
 
 module.exports = GscTopKeywords;

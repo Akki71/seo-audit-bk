@@ -14,6 +14,7 @@ const {
   getTrendingKeywords,
   collectAndStoreGSCData,
   getGSCGaWebDataFromDB,
+  getChatbotAnalyticsContext,
   // gemailtrigger,
   // gemailtriggervisibility,
   startGBPOAuth,
@@ -66,6 +67,8 @@ router.post(
   collectAndStoreGSCData,
 );
 router.get("/search-console/get-gsc-ga-web-db", authenticateToken, getGSCGaWebDataFromDB);
+
+// router.get("/search-console/chatbot-analytics", authenticateToken, getChatbotAnalyticsContext);
 // router.get("/search-console/gemailtrigger", authenticateToken, gemailtrigger);
 
 // router.get(

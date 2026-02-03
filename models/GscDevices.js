@@ -38,7 +38,7 @@ const GscDevices = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    device: {
+    keys: {
       type: DataTypes.STRING, // MOBILE | DESKTOP | TABLET
       allowNull: false,
     },
@@ -52,6 +52,15 @@ const GscDevices = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+     ctr: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+
+    position: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "gsc_devices",
@@ -61,7 +70,7 @@ const GscDevices = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["gsc_overall_id", "device"],
+        fields: ["gsc_overall_id", "keys"],
 
         name: "unique_gsc_device_period",
       },

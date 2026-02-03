@@ -38,7 +38,7 @@ const GaChannels = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    channel: {
+    session_default_channel_group: {
       type: DataTypes.STRING,
       allowNull: false, // Direct, Organic Search, Referral, etc.
     },
@@ -53,7 +53,7 @@ const GaChannels = sequelize.define(
       allowNull: true,
     },
 
-    avg_session_duration: {
+    average_session_duration: {
       type: DataTypes.FLOAT,
       allowNull: true,
     },

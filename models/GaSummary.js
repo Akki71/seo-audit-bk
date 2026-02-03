@@ -48,7 +48,7 @@ const GaSummary = sequelize.define(
       allowNull: true,
     },
 
-    page_views: {
+    screen_page_views: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -58,7 +58,7 @@ const GaSummary = sequelize.define(
       allowNull: true,
     },
 
-    avg_session_duration: {
+    average_session_duration : {
       type: DataTypes.FLOAT,
       allowNull: true,
     },

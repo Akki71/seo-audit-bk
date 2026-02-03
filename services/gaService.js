@@ -22,6 +22,7 @@ async function collectAndStoreGADataForBrand(brand) {
   const { access_token } = await refreshGoogleAccessToken(
     brand.ga_refresh_token,
   );
+// console.log("access_token",access_token);
 
   if (!access_token) throw new Error("GA access token failed");
   if (!brand.property_id) throw new Error("GA property_id missing");
@@ -198,7 +199,7 @@ async function collectAndStoreGADataForBrand(brand) {
     await GaDevices.bulkCreate(
       deviceRes.rows?.map((r) => ({
         ga_overall_id: gaOverallId,
-        device: r.dimensionValues?.[0]?.value,
+        deviceCategory: r.dimensionValues?.[0]?.value,
         sessions: +r.metricValues?.[0]?.value || 0,
       })) || [],
     );
@@ -220,7 +221,7 @@ async function collectAndStoreGADataForBrand(brand) {
       channelRes.rows?.map((r) => ({
         ga_overall_id: gaOverallId,
         channel: r.dimensionValues?.[0]?.value,
-        users: +r.metricValues?.[0]?.value || 0,
+        total_users: +r.metricValues?.[0]?.value || 0,
         sessions: +r.metricValues?.[1]?.value || 0,
         avg_session_duration: +r.metricValues?.[2]?.value || 0,
       })) || [],

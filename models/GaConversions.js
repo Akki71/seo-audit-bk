@@ -25,17 +25,17 @@ const GaConversions = sequelize.define(
       defaultValue: 0,
     },
 
-    revenue: {
+    total_revenue: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
     },
 
-    conversion_rate: {
+    session_conversion_rate: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
     },
 
-    avg_order_value: {
+    average_purchase_revenue: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
     },

@@ -38,12 +38,12 @@ const GaTopPages = sequelize.define(
       },
       onDelete: "CASCADE",
     },
-    path: {
+    page_path: {
       type: DataTypes.TEXT,
       allowNull: false, // URL path
     },
 
-    views: {
+    screen_page_views: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
