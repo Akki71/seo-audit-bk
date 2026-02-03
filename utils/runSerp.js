@@ -1,5 +1,5 @@
 
-const Domain = require("../models/domain");
+const Domain = require("../models/Domain");
 const Links = require("../models/link");
 const { DOMAIN_TO_BRAND, BRANDS, classifyDomain } = require("../config/brands");
 const {
