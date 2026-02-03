@@ -26,6 +26,7 @@ const zlib = require("zlib");
 const xml2js = require("xml2js");
 const { runSerp } = require("../routes/getSurpData");
 const { getLLMResponse } = require("../utils/getLLMData");
+const { sendPdfMail } = require("../utils/sendPdfMail");
 
 const parser = new xml2js.Parser({ trim: true });
 
@@ -5317,6 +5318,7 @@ async function getUrlsFromSitemap(sitemapUrl) {
   return [];
 }
 
+
 exports.generatePdf = async (req, res) => {
   try {
 
@@ -5473,7 +5475,7 @@ const siteUrl =domain.domain[0]
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `seo-audit-${Date.now()}.pdf`);
+    // const pdfPath = path.join(pdfDir, `seo-audit-${Date.now()}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: "new",
@@ -5566,19 +5568,43 @@ const siteUrl =domain.domain[0]
 
     await new Promise((r) => setTimeout(r, 2000));
 
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      landscape: true,
-      printBackground: true,
-      margin: {
-        top: "10mm",
-        bottom: "10mm",
-        left: "15mm",
-        right: "15mm",
-      },
-    });
+    // await page.pdf({
+    //   // path: pdfPath,
+    //   format: "A4",
+    //   landscape: true,
+    //   printBackground: true,
+    //   margin: {
+    //     top: "10mm",
+    //     bottom: "10mm",
+    //     left: "15mm",
+    //     right: "15mm",
+    //   },
+    // });
 
+    const pdfBuffer = await page.pdf({
+  format: "A4",
+  landscape: true,
+  printBackground: true,
+  margin: {
+    top: "10mm",
+    bottom: "10mm",
+    left: "15mm",
+    right: "15mm",
+  },
+});
+
+
+
+await sendPdfMail({
+  to: "akshay.b@aquilmedia.in",
+  subject: "Your SEO Audit Report",
+  html: `
+    <p>Hello,</p>
+    <p>Please find attached your SEO audit report.</p>
+    <p>Regards,<br/>Team</p>
+  `,
+  pdfBuffer,
+});
     await browser.close();
 
     /* ------------------------------------
@@ -5587,10 +5613,11 @@ const siteUrl =domain.domain[0]
 
     return res.json({
       success: true,
-      pdfPath,
-      finalAuditJson2,
+       message: "SEO audit PDF generated and sent via email",
+      // pdfPath,
+      // finalAuditJson2,
       //   pages: pagesData.length,
-        auditJson,
+        // auditJson,
       // pageSpeed,
       // pagesData
     });
