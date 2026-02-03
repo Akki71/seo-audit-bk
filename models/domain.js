@@ -5,6 +5,7 @@ const domain = sequelize.define(
   "domain",
   {
     
+
     
     id: {
       type: DataTypes.INTEGER,
