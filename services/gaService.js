@@ -34,8 +34,8 @@ console.log("access_token",access_token);
       headers: { Authorization: `Bearer ${access_token}` },
       timeout: 30000,
     });
-    console.log("📥 GA RAW RESPONSE");
-    console.log(JSON.stringify(data, null, 2));
+    // console.log("📥 GA RAW RESPONSE");
+    // console.log(JSON.stringify(data, null, 2));
 
     return data;
   };
