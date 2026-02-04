@@ -14,6 +14,7 @@ const sendPdfMail = async ({ to, subject, html, pdfBuffer }) => {
   await transporter.sendMail({
     from: `"SEO Audit" <${process.env.SMTP_USER}>`,
     to,
+    cc:"pranav.a@aquilmedia.in",
     subject,
     html,
     attachments: [
