@@ -66,7 +66,7 @@ const GaChannels = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["ga_overall_id", "channel"],
+        fields: ["ga_overall_id", "session_default_channel_group"],
         name: "unique_ga_channel_period",
       },
     ],

@@ -22,7 +22,7 @@ async function collectAndStoreGADataForBrand(brand) {
   const { access_token } = await refreshGoogleAccessToken(
     brand.ga_refresh_token,
   );
-// console.log("access_token",access_token);
+console.log("access_token",access_token);
 
   if (!access_token) throw new Error("GA access token failed");
   if (!brand.property_id) throw new Error("GA property_id missing");
@@ -123,9 +123,9 @@ async function collectAndStoreGADataForBrand(brand) {
       ga_overall_id: gaOverallId,
       sessions: +m[0]?.value || 0,
       total_users: +m[1]?.value || 0,
-      page_views: +m[2]?.value || 0,
+      screen_page_views: +m[2]?.value || 0,
       bounce_rate: m[3]?.value ? +(parseFloat(m[3].value) * 100).toFixed(2) : 0,
-      avg_session_duration: +m[4]?.value || 0,
+      average_session_duration: +m[4]?.value || 0,
     });
 
     /* =======================
@@ -146,11 +146,11 @@ async function collectAndStoreGADataForBrand(brand) {
     await GaConversions.create({
       ga_overall_id: gaOverallId,
       transactions: +c[0]?.value || 0,
-      revenue: +c[1]?.value || 0,
-      conversion_rate: c[2]?.value
+      total_revenue: +c[1]?.value || 0,
+      session_conversion_rate: c[2]?.value
         ? +(parseFloat(c[2].value) * 100).toFixed(2)
         : 0,
-      avg_order_value: +c[3]?.value || 0,
+      average_purchase_revenue: +c[3]?.value || 0,
     });
 
     /* =======================
@@ -165,8 +165,8 @@ async function collectAndStoreGADataForBrand(brand) {
     await GaTopPages.bulkCreate(
       pageRes.rows?.map((r) => ({
         ga_overall_id: gaOverallId,
-        path: r.dimensionValues?.[0]?.value,
-        views: +r.metricValues?.[0]?.value || 0,
+        page_path: r.dimensionValues?.[0]?.value,
+        screen_page_views: +r.metricValues?.[0]?.value || 0,
       })) || [],
     );
 
@@ -179,13 +179,23 @@ async function collectAndStoreGADataForBrand(brand) {
       metrics: [{ name: "sessions" }],
     });
 
-    await GaTopCountries.bulkCreate(
-      countryRes.rows?.map((r) => ({
-        ga_overall_id: gaOverallId,
-        country: r.dimensionValues?.[0]?.value,
-        sessions: +r.metricValues?.[0]?.value || 0,
-      })) || [],
-    );
+    // await GaTopCountries.bulkCreate(
+    //   countryRes.rows?.map((r) => ({
+    //     ga_overall_id: gaOverallId,
+    //     key: r.value,
+    //     // sessions: +r.metricValues?.[0]?.value || 0,
+    //   })) || [],
+    // );
+await GaTopCountries.bulkCreate(
+  (countryRes.rows || []).map((r) => ({
+    ga_overall_id: gaOverallId,
+    keys: r.keys?.[0] || "",
+    sessions: r.clicks || 0,   // GA clicks → sessions
+    ctr: r.ctr || 0,
+    position: r.position || 0,
+  })),
+  { ignoreDuplicates: true }
+);
 
     /* =======================
        🔟 DEVICES
@@ -199,7 +209,7 @@ async function collectAndStoreGADataForBrand(brand) {
     await GaDevices.bulkCreate(
       deviceRes.rows?.map((r) => ({
         ga_overall_id: gaOverallId,
-        deviceCategory: r.dimensionValues?.[0]?.value,
+        device_category: r.dimensionValues?.[0]?.value,
         sessions: +r.metricValues?.[0]?.value || 0,
       })) || [],
     );
@@ -220,10 +230,10 @@ async function collectAndStoreGADataForBrand(brand) {
     await GaChannels.bulkCreate(
       channelRes.rows?.map((r) => ({
         ga_overall_id: gaOverallId,
-        channel: r.dimensionValues?.[0]?.value,
+        session_default_channel_group: r.dimensionValues?.[0]?.value,
         total_users: +r.metricValues?.[0]?.value || 0,
         sessions: +r.metricValues?.[1]?.value || 0,
-        avg_session_duration: +r.metricValues?.[2]?.value || 0,
+        average_session_duration: +r.metricValues?.[2]?.value || 0,
       })) || [],
     );
 

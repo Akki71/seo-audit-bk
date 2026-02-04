@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 
-const GscTopKeywords = sequelize.define(
-  "GscTopKeywords",
+const GaTopCountries = sequelize.define(
+  "GaTopCountries",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -10,54 +10,48 @@ const GscTopKeywords = sequelize.define(
       primaryKey: true,
     },
 
-    gsc_overall_id: {
+    ga_overall_id: {
       type: DataTypes.BIGINT,
       allowNull: false,
       references: {
-        model: "gsc_overall_data",
+        model: "ga_overall_data",
         key: "id",
       },
       onDelete: "CASCADE",
     },
 
     keys: {
-      type: DataTypes.TEXT,
+      type: DataTypes.STRING(255),
       allowNull: false,
     },
 
-    clicks: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-
-    impressions: {
+    sessions: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
 
     ctr: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DOUBLE,
       defaultValue: 0,
     },
 
     position: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DOUBLE,
       defaultValue: 0,
     },
   },
   {
-    tableName: "gsc_top_keywords",
+    tableName: "ga_top_countries",
     timestamps: true,
     underscored: true,
-
     indexes: [
       {
         unique: true,
-        fields: ["gsc_overall_id", "keys"],
-        name: "unique_gsc_keyword_period",
+        fields: ["ga_overall_id", "keys"],
+        name: "unique_ga_country_period",
       },
     ],
-  },
+  }
 );
 
-module.exports = GscTopKeywords;
+module.exports = GaTopCountries;
