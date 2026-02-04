@@ -16,10 +16,36 @@ const app = express();
 
 connectDB();
 
-app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
-    credentials: true
-}));
+const allowedOrigins = process.env.FRONTEND_URL
+  ?.split(",")
+  .map(url => url.trim());
+
+console.log("✅ Allowed Origins:", allowedOrigins);
+
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+      console.log("Incoming Origin:", normalizedOrigin);
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      console.error("❌ Blocked by CORS:", normalizedOrigin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
+
+
+
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 
