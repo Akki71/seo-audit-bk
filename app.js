@@ -25,23 +25,24 @@ console.log("✅ Allowed Origins:", allowedOrigins);
 
 app.use(
   cors({
-origin: function (origin, callback) {
-  if (!origin) return callback(null, true);
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
 
-  const normalizedOrigin = origin.replace(/\/+$/, "");
-  console.log("Incoming Origin:", normalizedOrigin);
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+      console.log("Incoming Origin:", normalizedOrigin);
 
-  if (allowedOrigins.includes(normalizedOrigin)) {
-    return callback(null, true);
-  }
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
 
-  console.error("❌ Blocked by CORS:", normalizedOrigin);
-  return callback(new Error("Not allowed by CORS"));
-}
-
+      console.error("❌ Blocked by CORS:", normalizedOrigin);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
+
 
 
 
