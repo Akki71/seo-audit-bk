@@ -397,32 +397,29 @@ function renderAuditJsonToHtml(data) {
       </div>
     `;
   };
-const hasValidMetrics = (obj) =>
-  obj &&
-  Object.values(obj).some(
-    v => v !== null && v !== undefined && v !== "" && v !== 0
-  );
+  const hasValidMetrics = (obj) =>
+    obj &&
+    Object.values(obj).some(
+      (v) => v !== null && v !== undefined && v !== "" && v !== 0,
+    );
   const overview = data.overview || {};
   const scores = data.overview_scores || {};
   const graph = data.graph_data || {};
   const urlOpt = data.url_optimization || {};
   const action = data.top_priority_action_plan || {};
-const hasGASummary = hasValidMetrics(ga?.summary);
-const hasGSCSummary = hasValidMetrics(gsc?.summary);
+  const hasGASummary = hasValidMetrics(ga?.summary);
+  const hasGSCSummary = hasValidMetrics(gsc?.summary);
 
-const hasGMB = Boolean(basic?.google_my_business_found);
+  const hasGMB = Boolean(basic?.google_my_business_found);
 
-const sources = data?.LLMData ?? [];
+  const sources = data?.LLMData ?? [];
 
-const ai_search = {
-  sources,
-  mentions: sources.reduce((sum, s) => sum + (s.mentions || 0), 0),
-  cited_pages: sources.reduce((sum, s) => sum + (s.citedPages || 0), 0),
-  visibility: sources.reduce(
-    (sum, s) => sum + ((s.mentions || 0) * 10),
-    0
-  )
-};
+  const ai_search = {
+    sources,
+    mentions: sources.reduce((sum, s) => sum + (s.mentions || 0), 0),
+    cited_pages: sources.reduce((sum, s) => sum + (s.citedPages || 0), 0),
+    visibility: sources.reduce((sum, s) => sum + (s.mentions || 0) * 10, 0),
+  };
 
   const renderUrlIssues = (issues = []) =>
     !issues.length
@@ -2574,7 +2571,9 @@ img {
     </div>
 
     <!-- RIGHT SUMMARY -->
-${!hasGASummary ? `
+${
+  !hasGASummary
+    ? `
   <div class="tool-summary tool-summary-info">
 
     <div class="tool-summary-title">
@@ -2605,7 +2604,8 @@ ${!hasGASummary ? `
     </div>
 
   </div>
-` : `
+`
+    : `
     <div class="tool-summary">
 
       <div class="tool-summary-title">Analytics Summary</div>
@@ -2618,7 +2618,8 @@ ${!hasGASummary ? `
         <div class="tool-summary-item">Conversions: <b>${safe(ga?.summary?.total_conversions)}</b></div>
       </div>
 
-    </div>`}
+    </div>`
+}
 
   </div>
 
@@ -2645,7 +2646,9 @@ ${!hasGASummary ? `
     </div>
 
     <!-- RIGHT SUMMARY -->
-${hasGSCSummary ? `
+${
+  hasGSCSummary
+    ? `
   <div class="tool-summary">
 
     <div class="tool-summary-title">
@@ -2668,7 +2671,8 @@ ${hasGSCSummary ? `
     </div>
 
   </div>
-` : `
+`
+    : `
   <div class="tool-summary tool-summary-info">
 
     <div class="tool-summary-title">
@@ -2699,7 +2703,8 @@ ${hasGSCSummary ? `
     </div>
 
   </div>
-`}
+`
+}
 
 
   </div>
@@ -2727,7 +2732,9 @@ ${hasGSCSummary ? `
     </div>
 
     <!-- RIGHT SUMMARY -->
-    ${hasGMB ? `
+    ${
+      hasGMB
+        ? `
   <div class="tool-summary">
 
     <div class="tool-summary-title">
@@ -2750,7 +2757,8 @@ ${hasGSCSummary ? `
     </div>
 
   </div>
-` : `
+`
+        : `
   <div class="tool-summary tool-summary-info">
 
     <div class="tool-summary-title">
@@ -2781,7 +2789,8 @@ ${hasGSCSummary ? `
     </div>
 
   </div>
-`}
+`
+    }
 
 
   </div>
@@ -2900,13 +2909,9 @@ ${hasGSCSummary ? `
 
       <h3>AI Search Detection</h3>
 
-      <div class="schema-status ${
-       ai_search?.cited_pages > 0 ? "ok" : "fail"
-      }">
+      <div class="schema-status ${ai_search?.cited_pages > 0 ? "ok" : "fail"}">
         ${
-         ai_search?.cited_pages > 0
-            ? "AI Presence Detected"
-            : "No AI Presence"
+          ai_search?.cited_pages > 0 ? "AI Presence Detected" : "No AI Presence"
         }
       </div>
     </div>
@@ -2947,37 +2952,37 @@ ${hasGSCSummary ? `
       <div class="schema-grid" style="margin-top:12px;">
 
         <!-- ChatGPT -->
-        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+        <div class="schema-item" style="align-items:center;gap:8px;">
           <img src="https://www.google.com/s2/favicons?domain=chatgpt.com" width="16" height="16" />
           ChatGPT:
           <b>
-            ${ai_search?.sources?.find(s => s.source === "chatgpt")?.mentions ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "chatgpt")?.mentions ?? 0}
             mentions ·
-            ${ai_search?.sources?.find(s => s.source === "chatgpt")?.citedPages ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "chatgpt")?.citedPages ?? 0}
             pages
           </b>
         </div>
 
         <!-- Gemini -->
-        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+        <div class="schema-item" style="align-items:center;gap:8px;">
           <img src="https://www.google.com/s2/favicons?domain=gemini.google.com" width="16" height="16" />
           Gemini:
           <b>
-            ${ai_search?.sources?.find(s => s.source === "gemini")?.mentions ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "gemini")?.mentions ?? 0}
             mentions ·
-            ${ai_search?.sources?.find(s => s.source === "gemini")?.citedPages ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "gemini")?.citedPages ?? 0}
             pages
           </b>
         </div>
 
         <!-- SERP / Google -->
-        <div class="schema-item" style="display:flex;align-items:center;gap:8px;">
+        <div class="schema-item" style="align-items:center;gap:8px;">
           <img src="https://www.google.com/s2/favicons?domain=google.com" width="16" height="16" />
           Google (SERP):
           <b>
-            ${ai_search?.sources?.find(s => s.source === "serp")?.mentions ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "serp")?.mentions ?? 0}
             mentions ·
-            ${ai_search?.sources?.find(s => s.source === "serp")?.citedPages ?? 0}
+            ${ai_search?.sources?.find((s) => s.source === "serp")?.citedPages ?? 0}
             pages
           </b>
         </div>
@@ -4649,7 +4654,7 @@ function gradeOnPage(pages) {
   const checksPerPage = 6;
   let score = 0;
 
-  pages.forEach(p => {
+  pages.forEach((p) => {
     const d = p.data || {};
     if (d.title) score++;
     if (d.meta_description) score++;
@@ -4674,7 +4679,7 @@ function gradeLinks(pages) {
 
   const totalLinks = pages.reduce(
     (sum, p) => sum + (p?.data?.internalLinks?.length || 0),
-    0
+    0,
   );
 
   const avgLinks = totalLinks / pages.length;
@@ -4689,9 +4694,7 @@ function gradeLinks(pages) {
 function gradeUsability(pages) {
   if (!pages.length) return "F";
 
-  const mobileIssues = pages.filter(
-    p => p.data?.viewport_missing
-  ).length;
+  const mobileIssues = pages.filter((p) => p.data?.viewport_missing).length;
 
   const ratio = mobileIssues / pages.length;
 
@@ -4726,9 +4729,9 @@ function gradePerformance(pageSpeed) {
 function gradeSocial(pages) {
   const platforms = new Set();
 
-  pages.forEach(p => {
+  pages.forEach((p) => {
     const s = p.data?.social_links || {};
-    Object.keys(s).forEach(k => {
+    Object.keys(s).forEach((k) => {
       if (s[k]?.length) platforms.add(k);
     });
   });
@@ -5092,8 +5095,6 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
     ),
   };
 
-
-
   return {
     totals: {
       pages: totalPages,
@@ -5184,7 +5185,7 @@ async function buildAuditFacts(pages, ga, gsc, pageSpeed) {
       performance: gradePerformance(pageSpeed),
       social: gradeSocial(pages),
     },
-     
+
     security: {
       ssl_enabled: sslEnabled,
     },
@@ -5328,19 +5329,17 @@ async function getUrlsFromSitemap(sitemapUrl) {
   return [];
 }
 
-
 exports.generatePdf = async (req, res) => {
   try {
-
     const userId = String(req.user?.id);
     // console.log("userId", userId)
-const domain = await Brand.findOne({
+    const domain = await Brand.findOne({
       where: { user_id: userId },
     });
-const siteUrl =domain.domain[0]
-   const LLMData = await getLLMResponse(siteUrl)
-console.log("llm data", LLMData)
-// return res.json(LLMData);
+    const siteUrl = domain.domain[0];
+    const LLMData = await getLLMResponse(siteUrl);
+    console.log("llm data", LLMData);
+    // return res.json(LLMData);
     if (!domain) {
       return res.json({
         status: false,
@@ -5355,16 +5354,15 @@ console.log("llm data", LLMData)
     const startDate = start.toISOString().split("T")[0];
 
     const urls = await Urls.findAll({ where: { user_id: id } });
-    console.log("urls", urls.length)
+    console.log("urls", urls.length);
 
-
-        if (!urls || urls.length === 0) { 
-          return res.json({
-            status: false,
-            message: "No URLs found for domain",
-          });
-        }
-    const pageUrls = urls.map((u) => u.url).slice(0, 10);
+    if (!urls || urls.length === 0) {
+      return res.json({
+        status: false,
+        message: "No URLs found for domain",
+      });
+    }
+    const pageUrls = urls.map((u) => u.url).slice(0, 1);
     //     const pageUrls = Urls.slice(0, 10);
 
     // console.log("url fetch", Urls.length);
@@ -5424,7 +5422,7 @@ console.log("llm data", LLMData)
       startDate: startDate,
       endDate: endDate,
     });
-console.log("gatdata fetch")
+    console.log("gatdata fetch");
     // //  return res.json({success:true, data:getdata});
     const gaData = domain.ga_refresh_token
       ? await getGASeoData({
@@ -5434,12 +5432,12 @@ console.log("gatdata fetch")
           endDate,
         })
       : null;
-console.log("ga fetch")
+    console.log("ga fetch");
 
     const gscData = domain.gsc_refresh_token
       ? await getGSCSeoData({
           refreshToken: domain.gsc_refresh_token,
-          siteUrl:siteUrl,
+          siteUrl: siteUrl,
           startDate,
           endDate,
         })
@@ -5561,7 +5559,7 @@ console.log("ga fetch")
       ...auditFacts,
       ...auditJson,
       ...getdata,
-      LLMData
+      LLMData,
     };
 
     const finalAuditJson2 = {
@@ -5594,29 +5592,31 @@ console.log("ga fetch")
     // });
 
     const pdfBuffer = await page.pdf({
-  format: "A4",
-  landscape: true,
-  printBackground: true,
-  margin: {
-    top: "10mm",
-    bottom: "10mm",
-    left: "15mm",
-    right: "15mm",
-  },
-});
+      format: "A4",
+      landscape: true,
+      printBackground: true,
+      margin: {
+        top: "10mm",
+        bottom: "10mm",
+        left: "15mm",
+        right: "15mm",
+      },
+    });
 
+    const reportEmails = process.env.REPORT_EMAILS?.split(",")
+      .map((email) => email.trim())
+      .filter(Boolean);
 
-
-await sendPdfMail({
-  to: "akshay.b@aquilmedia.in",
-  subject: "Your SEO Audit Report",
-  html: `
+    await sendPdfMail({
+      to: reportEmails,
+      subject: "Your SEO Audit Report",
+      html: `
     <p>Hello,</p>
     <p>Please find attached your SEO audit report.</p>
     <p>Regards,<br/>Team</p>
   `,
-  pdfBuffer,
-});
+      pdfBuffer,
+    });
     await browser.close();
 
     /* ------------------------------------
@@ -5625,12 +5625,12 @@ await sendPdfMail({
 
     return res.json({
       success: true,
-       message: "SEO audit PDF generated and sent via email",
+      message: "SEO audit PDF generated and sent via email",
       //  LLMData,
       // pdfPath,
       // finalAuditJson2,
       //   pages: pagesData.length,
-        // auditJson,
+      // auditJson,
       // pageSpeed,
       // pagesData
     });
@@ -5798,14 +5798,14 @@ exports.getUrl = async (req, res) => {
         message: "Unauthorized",
       });
     }
-const domain = await Brand.findOne({where: {user_id: userId}});
+    const domain = await Brand.findOne({ where: { user_id: userId } });
 
     if (domain.urls_store) {
-  return res.status(200).json({
-    success: true,
-    message: "URLs already fetched for this domain",
-  });
-}
+      return res.status(200).json({
+        success: true,
+        message: "URLs already fetched for this domain",
+      });
+    }
 
     console.log("userrrr", userId);
     if (!domain) {
@@ -5814,7 +5814,7 @@ const domain = await Brand.findOne({where: {user_id: userId}});
         message: "No user found",
       });
     }
-    console.log("domain", domain.brand_name)
+    console.log("domain", domain.brand_name);
     const domainId = domain.id;
     if (!url) {
       return res.status(200).json({ error: "URL is required" });
@@ -5846,12 +5846,10 @@ const domain = await Brand.findOne({where: {user_id: userId}});
 
     console.log("pageUrls count:", pageUrls.length);
 
-     let pagesData = await fetchPagesInBatches(pageUrls, 5);
+    let pagesData = await fetchPagesInBatches(pageUrls, 5);
     pagesData = await removeDuplicatePages(pagesData);
 
-
-
-        const records = pageUrls.map((pageUrl) => ({
+    const records = pageUrls.map((pageUrl) => ({
       user_id: userId,
       domainId: domainId,
       url: pageUrl,
@@ -5875,18 +5873,15 @@ const domain = await Brand.findOne({where: {user_id: userId}});
         h2: page?.data?.h2 || [],
       })),
     );
-  
 
-
-     domain.urls_store = true;
-       domain.data_store = true;
-     await domain.save();
+    domain.urls_store = true;
+    domain.data_store = true;
+    await domain.save();
 
     return res.status(200).json({
       success: true,
       total: pageUrls.length,
-      message:"urls successfully fetched"
-
+      message: "urls successfully fetched",
     });
   } catch (error) {
     console.error(error);
@@ -5896,10 +5891,9 @@ const domain = await Brand.findOne({where: {user_id: userId}});
 
 exports.generatePageData = async (req, res) => {
   try {
-
     const userId = req.user?.id;
 
-       console.log("userId", userId);
+    console.log("userId", userId);
 
     if (!userId) {
       return res.status(401).json({
@@ -5907,11 +5901,10 @@ exports.generatePageData = async (req, res) => {
         message: "Unauthorized",
       });
     }
-const domain = await Brand.findOne({
+    const domain = await Brand.findOne({
       where: { user_id: userId },
-     
     });
-// return res.json(domain);
+    // return res.json(domain);
     if (!domain) {
       return res.json({
         status: false,
@@ -5928,32 +5921,17 @@ const domain = await Brand.findOne({
       });
     }
 
-// return res.json(urls);
+    // return res.json(urls);
 
-    const pageUrls = urls.map((u) => u.url);
+    const pageUrls = urls.map((u) => u.url).splice(975, 65);
     let pagesData = await fetchPagesInBatches(pageUrls, 5);
     pagesData = await removeDuplicatePages(pagesData);
 
-    await Webpage.bulkCreate(
-      pagesData.map((page) => ({
-        user_id: userId,
-        domainId: id,
-        url: page.url,
-        title: page?.data?.title || "",
-        date: new Date(),
-        meta_description: page?.data?.meta_description || "",
-        body_text: page?.data?.body_text || "",
-        canonical: page?.data?.canonical || "",
-        h1: page?.data?.h1 || [],
-        h2: page?.data?.h2 || [],
-      })),
-    );
-    domain.data_store = true;
-     await domain.save();
     return res.json({
       success: true,
       user_id: userId,
       pagesFetched: pagesData.length,
+      pagesData: pagesData,
     });
   } catch (err) {
     console.error("❌ PAGE DATA ERROR", err);
@@ -5963,7 +5941,6 @@ const domain = await Brand.findOne({
     });
   }
 };
-
 
 exports.userData = async (req, res) => {
   try {
@@ -5996,8 +5973,8 @@ exports.userData = async (req, res) => {
       country: domain.country,
       site_url: domain.site_url,
       image_url: domain.image_url,
-      data_store:domain.data_store ? 1: 0,
-      urls_store:domain.urls_store ? 1: 0,
+      data_store: domain.data_store ? 1 : 0,
+      urls_store: domain.urls_store ? 1 : 0,
 
       // 🔐 Tokens: show only 0 or 1
       refresh_token: domain.refresh_token ? 1 : 0,
@@ -6009,7 +5986,6 @@ exports.userData = async (req, res) => {
       success: true,
       data: response,
     });
-
   } catch (err) {
     console.error("❌ PAGE DATA ERROR", err);
     return res.status(500).json({
