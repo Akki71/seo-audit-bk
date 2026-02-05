@@ -78,6 +78,14 @@ const Brand = sequelize.define(
       type:DataTypes.STRING,
       allowNull:true
     },
+    urls_store:{
+    type: DataTypes.BOOLEAN,
+    defaultValue: false, 
+    },
+    data_store:{
+    type: DataTypes.BOOLEAN,
+    defaultValue: false, 
+    }
   },
  
   {
