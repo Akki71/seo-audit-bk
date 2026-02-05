@@ -33,7 +33,6 @@ const parser = new xml2js.Parser({ trim: true });
 const VISITED_SITEMAPS = new Set();
 const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
 
-
 async function extractUrls(pageUrl) {
   const { data: html, request } = await axios.get(pageUrl, {
     maxRedirects: 5,
@@ -413,6 +412,17 @@ const hasGSCSummary = hasValidMetrics(gsc?.summary);
 
 const hasGMB = Boolean(basic?.google_my_business_found);
 
+const sources = data?.LLMData ?? [];
+
+const ai_search = {
+  sources,
+  mentions: sources.reduce((sum, s) => sum + (s.mentions || 0), 0),
+  cited_pages: sources.reduce((sum, s) => sum + (s.citedPages || 0), 0),
+  visibility: sources.reduce(
+    (sum, s) => sum + ((s.mentions || 0) * 10),
+    0
+  )
+};
 
   const renderUrlIssues = (issues = []) =>
     !issues.length
@@ -2891,10 +2901,10 @@ ${hasGSCSummary ? `
       <h3>AI Search Detection</h3>
 
       <div class="schema-status ${
-        data?.ai_search?.cited_pages > 0 ? "ok" : "fail"
+       ai_search?.cited_pages > 0 ? "ok" : "fail"
       }">
         ${
-          data?.ai_search?.cited_pages > 0
+         ai_search?.cited_pages > 0
             ? "AI Presence Detected"
             : "No AI Presence"
         }
@@ -2914,22 +2924,22 @@ ${hasGSCSummary ? `
       <div class="schema-grid">
         <div class="schema-item">
           AI Visibility Score:
-          <b>${data?.ai_search?.visibility ?? 0}</b>
+          <b>${ai_search?.visibility ?? 0}</b>
         </div>
 
         <div class="schema-item">
           Total Mentions:
-          <b>${data?.ai_search?.mentions ?? 0}</b>
+          <b>${ai_search?.mentions ?? 0}</b>
         </div>
 
         <div class="schema-item">
           Cited Pages:
-          <b>${data?.ai_search?.cited_pages ?? 0}</b>
+          <b>${ai_search?.cited_pages ?? 0}</b>
         </div>
 
         <div class="schema-item">
           AI Readiness:
-          <b>${data?.ai_search?.cited_pages > 0 ? "Indexed by AI" : "Not Indexed"}</b>
+          <b>${ai_search?.cited_pages > 0 ? "Indexed by AI" : "Not Indexed"}</b>
         </div>
       </div>
 
@@ -2941,9 +2951,9 @@ ${hasGSCSummary ? `
           <img src="https://www.google.com/s2/favicons?domain=chatgpt.com" width="16" height="16" />
           ChatGPT:
           <b>
-            ${data?.ai_search?.sources?.find(s => s.source === "chatgpt")?.mentions ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "chatgpt")?.mentions ?? 0}
             mentions ·
-            ${data?.ai_search?.sources?.find(s => s.source === "chatgpt")?.citedPages ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "chatgpt")?.citedPages ?? 0}
             pages
           </b>
         </div>
@@ -2953,9 +2963,9 @@ ${hasGSCSummary ? `
           <img src="https://www.google.com/s2/favicons?domain=gemini.google.com" width="16" height="16" />
           Gemini:
           <b>
-            ${data?.ai_search?.sources?.find(s => s.source === "gemini")?.mentions ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "gemini")?.mentions ?? 0}
             mentions ·
-            ${data?.ai_search?.sources?.find(s => s.source === "gemini")?.citedPages ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "gemini")?.citedPages ?? 0}
             pages
           </b>
         </div>
@@ -2965,9 +2975,9 @@ ${hasGSCSummary ? `
           <img src="https://www.google.com/s2/favicons?domain=google.com" width="16" height="16" />
           Google (SERP):
           <b>
-            ${data?.ai_search?.sources?.find(s => s.source === "serp")?.mentions ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "serp")?.mentions ?? 0}
             mentions ·
-            ${data?.ai_search?.sources?.find(s => s.source === "serp")?.citedPages ?? 0}
+            ${ai_search?.sources?.find(s => s.source === "serp")?.citedPages ?? 0}
             pages
           </b>
         </div>
@@ -2978,7 +2988,7 @@ ${hasGSCSummary ? `
       <div class="schema-recommendation">
         <b>Recommendation:</b>
         ${
-          data?.ai_search?.cited_pages > 0
+          ai_search?.cited_pages > 0
             ? "Continue strengthening entity signals, structured data, and authoritative content to maintain AI visibility."
             : "Improve AI discoverability by adding structured data, strengthening topical authority, and publishing AI-readable content."
         }
@@ -5329,7 +5339,7 @@ const domain = await Brand.findOne({
     });
 const siteUrl =domain.domain[0]
    const LLMData = await getLLMResponse(siteUrl)
-
+console.log("llm data", LLMData)
 // return res.json(LLMData);
     if (!domain) {
       return res.json({
@@ -5354,7 +5364,7 @@ const siteUrl =domain.domain[0]
             message: "No URLs found for domain",
           });
         }
-    const pageUrls = urls.map((u) => u.url);
+    const pageUrls = urls.map((u) => u.url).slice(0, 10);
     //     const pageUrls = Urls.slice(0, 10);
 
     // console.log("url fetch", Urls.length);
@@ -5551,7 +5561,7 @@ console.log("ga fetch")
       ...auditFacts,
       ...auditJson,
       ...getdata,
-      ...LLMData
+      LLMData
     };
 
     const finalAuditJson2 = {
@@ -5571,7 +5581,7 @@ console.log("ga fetch")
     await new Promise((r) => setTimeout(r, 2000));
 
     // await page.pdf({
-    //   // path: pdfPath,
+    //   path: pdfPath,
     //   format: "A4",
     //   landscape: true,
     //   printBackground: true,
@@ -5616,6 +5626,7 @@ await sendPdfMail({
     return res.json({
       success: true,
        message: "SEO audit PDF generated and sent via email",
+      //  LLMData,
       // pdfPath,
       // finalAuditJson2,
       //   pages: pagesData.length,
@@ -5923,6 +5934,61 @@ const domain = await Brand.findOne({
   } catch (err) {
     console.error("❌ PAGE DATA ERROR", err);
     res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+
+exports.userData = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const domain = await Brand.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!domain) {
+      return res.json({
+        success: false,
+        message: "Brand not found",
+      });
+    }
+
+    // ✅ Clean + controlled response
+    const response = {
+      id: domain.id,
+      user_id: domain.user_id,
+      brand_name: domain.brand_name,
+      domain: domain.domain,
+      country: domain.country,
+      site_url: domain.site_url,
+      image_url: domain.image_url,
+      data_store:domain.data_store,
+      urls_store:domain.urls_store,
+
+      // 🔐 Tokens: show only 0 or 1
+      refresh_token: domain.refresh_token ? 1 : 0,
+      ga_refresh_token: domain.ga_refresh_token ? 1 : 0,
+      gsc_refresh_token: domain.gsc_refresh_token ? 1 : 0,
+    };
+
+    return res.json({
+      success: true,
+      data: response,
+    });
+
+  } catch (err) {
+    console.error("❌ PAGE DATA ERROR", err);
+    return res.status(500).json({
       success: false,
       error: err.message,
     });

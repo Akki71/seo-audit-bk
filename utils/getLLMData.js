@@ -181,7 +181,7 @@ Rules:
     const cleanLocationJSON = extractPureJSON(llmResponse);
     const results = JSON.parse(cleanLocationJSON);
 
-    console.log("LOCATION RESULT:", results);
+    // console.log("LOCATION RESULT:", results);
 
     // ---- BEST COMPANIES PROMPT ----
     const promptForData = `
@@ -203,6 +203,8 @@ Respond ONLY in valid JSON using this exact format:
 
     const surpData =await runSerp(`List the best ${results.business_type} brands in ${results.city}, ${results.country}`,
     );
+
+    // console.log("surpData", surpData)
     const rawCompanies = await runPrompt(promptForData);
     const cleanCompaniesJSON = extractPureJSON(rawCompanies);
     const companiesResult = JSON.parse(cleanCompaniesJSON);
