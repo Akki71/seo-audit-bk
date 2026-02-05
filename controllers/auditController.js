@@ -5846,8 +5846,9 @@ const domain = await Brand.findOne({where: {user_id: userId}});
     await Urls.bulkCreate(records, {
       updateOnDuplicate: ["url"],
     });
-// await domain.urls_store = true;
-// await domain.save();
+     domain.urls_store = true;
+     await domain.save();
+
     return res.status(200).json({
       success: true,
       user_id: userId,
@@ -5914,12 +5915,11 @@ const domain = await Brand.findOne({
         h2: page?.data?.h2 || [],
       })),
     );
-    
-    // console.log("after pagesData", pagesData.length);
+    domain.data_store = true;
+     await domain.save();
     return res.json({
       success: true,
       user_id: userId,
-
       pagesFetched: pagesData.length,
     });
   } catch (err) {
