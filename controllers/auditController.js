@@ -5344,15 +5344,16 @@ const siteUrl =domain.domain[0]
     start.setMonth(start.getMonth() - 6);
     const startDate = start.toISOString().split("T")[0];
 
-    const urls = await Urls.findAll({ where: { domainId: id } });
+    const urls = await Urls.findAll({ where: { user_id: id } });
+    console.log("urls", urls.length)
 
-    //      const Urls = await getUrlsFromSitemap(`${domain.domain}sitemap.xml`);
-    //     if (!Urls.length) {
-    //       return res.json({
-    //         status: false,
-    //         message: "No URLs found for domain",
-    //       });
-    //     }
+
+        if (!urls || urls.length === 0) { 
+          return res.json({
+            status: false,
+            message: "No URLs found for domain",
+          });
+        }
     const pageUrls = urls.map((u) => u.url);
     //     const pageUrls = Urls.slice(0, 10);
 
@@ -5413,7 +5414,7 @@ const siteUrl =domain.domain[0]
       startDate: startDate,
       endDate: endDate,
     });
-
+console.log("gatdata fetch")
     // //  return res.json({success:true, data:getdata});
     const gaData = domain.ga_refresh_token
       ? await getGASeoData({
@@ -5423,6 +5424,7 @@ const siteUrl =domain.domain[0]
           endDate,
         })
       : null;
+console.log("ga fetch")
 
     const gscData = domain.gsc_refresh_token
       ? await getGSCSeoData({
@@ -5433,7 +5435,7 @@ const siteUrl =domain.domain[0]
         })
       : null;
 
-    console.log("ga gsc fetch");
+    console.log("ga fetch");
 
     /* ------------------------------------
            4. Normalize facts (THIS IS CRITICAL)
@@ -5777,7 +5779,7 @@ async function fetchAllSitemapUrls(baseUrl) {
 
 exports.getUrl = async (req, res) => {
   try {
-    const { url, limit = 20 } = req.body;
+    const { url, limit = 2000 } = req.body;
     const userId = req.user?.id;
 const domain = await Brand.findOne({where: {user_id: userId}});
     if (!userId) {
