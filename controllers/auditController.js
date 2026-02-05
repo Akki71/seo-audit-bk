@@ -5846,7 +5846,8 @@ const domain = await Brand.findOne({where: {user_id: userId}});
     await Urls.bulkCreate(records, {
       updateOnDuplicate: ["url"],
     });
-
+// await domain.urls_store = true;
+// await domain.save();
     return res.status(200).json({
       success: true,
       user_id: userId,
@@ -5861,17 +5862,7 @@ const domain = await Brand.findOne({where: {user_id: userId}});
 
 exports.generatePageData = async (req, res) => {
   try {
-    // const { id } = req.query;
-    // if (!id) {
-    //   return res.status(200).json({ error: "Invalid User" });
-    // }
-    // const domain = await Domain.findOne({ where: { id } });
-    // if (!domain) {
-    //   return res.json({
-    //     status: false,
-    //     message: "No domain data found",
-    //   });
-    // }
+
     const userId = req.user?.id;
 
        console.log("userId", userId);
@@ -5923,8 +5914,8 @@ const domain = await Brand.findOne({
         h2: page?.data?.h2 || [],
       })),
     );
-
-    console.log("after pagesData", pagesData.length);
+    
+    // console.log("after pagesData", pagesData.length);
     return res.json({
       success: true,
       user_id: userId,
