@@ -5792,13 +5792,21 @@ exports.getUrl = async (req, res) => {
   try {
     const { url, limit = 2000 } = req.body;
     const userId = req.user?.id;
-const domain = await Brand.findOne({where: {user_id: userId}});
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
       });
     }
+const domain = await Brand.findOne({where: {user_id: userId}});
+
+    if (domain.urls_store) {
+  return res.status(200).json({
+    success: true,
+    message: "URLs already fetched for this domain",
+  });
+}
+
     console.log("userrrr", userId);
     if (!domain) {
       return res.status(200).json({
