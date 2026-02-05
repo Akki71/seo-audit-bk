@@ -5362,7 +5362,7 @@ exports.generatePdf = async (req, res) => {
         message: "No URLs found for domain",
       });
     }
-    const pageUrls = urls.map((u) => u.url).slice(0, 1);
+    const pageUrls = urls.map((u) => u.url);
     //     const pageUrls = Urls.slice(0, 10);
 
     // console.log("url fetch", Urls.length);
