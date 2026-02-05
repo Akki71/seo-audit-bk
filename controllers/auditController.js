@@ -5806,6 +5806,7 @@ const domain = await Brand.findOne({where: {user_id: userId}});
         message: "No user found",
       });
     }
+    console.log("domain", domain.brand_name)
     const domainId = domain.id;
     if (!url) {
       return res.status(200).json({ error: "URL is required" });
@@ -5837,7 +5838,12 @@ const domain = await Brand.findOne({where: {user_id: userId}});
 
     console.log("pageUrls count:", pageUrls.length);
 
-    const records = pageUrls.map((pageUrl) => ({
+     let pagesData = await fetchPagesInBatches(pageUrls, 5);
+    pagesData = await removeDuplicatePages(pagesData);
+
+
+
+        const records = pageUrls.map((pageUrl) => ({
       user_id: userId,
       domainId: domainId,
       url: pageUrl,
@@ -5846,7 +5852,26 @@ const domain = await Brand.findOne({where: {user_id: userId}});
     await Urls.bulkCreate(records, {
       updateOnDuplicate: ["url"],
     });
+
+    await Webpage.bulkCreate(
+      pagesData.map((page) => ({
+        user_id: userId,
+        domainId: domainId,
+        url: page.url,
+        title: page?.data?.title || "",
+        date: new Date(),
+        meta_description: page?.data?.meta_description || "",
+        body_text: page?.data?.body_text || "",
+        canonical: page?.data?.canonical || "",
+        h1: page?.data?.h1 || [],
+        h2: page?.data?.h2 || [],
+      })),
+    );
+  
+
+
      domain.urls_store = true;
+       domain.data_store = true;
      await domain.save();
 
     return res.status(200).json({
@@ -5963,8 +5988,8 @@ exports.userData = async (req, res) => {
       country: domain.country,
       site_url: domain.site_url,
       image_url: domain.image_url,
-      data_store:domain.data_store,
-      urls_store:domain.urls_store,
+      data_store:domain.data_store ? 1: 0,
+      urls_store:domain.urls_store ? 1: 0,
 
       // 🔐 Tokens: show only 0 or 1
       refresh_token: domain.refresh_token ? 1 : 0,
