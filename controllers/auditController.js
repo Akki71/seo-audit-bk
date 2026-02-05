@@ -5876,9 +5876,9 @@ const domain = await Brand.findOne({where: {user_id: userId}});
 
     return res.status(200).json({
       success: true,
-      user_id: userId,
       total: pageUrls.length,
-      data: pageUrls,
+      message:"urls successfully fetched"
+
     });
   } catch (error) {
     console.error(error);
