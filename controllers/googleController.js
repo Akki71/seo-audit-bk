@@ -1101,6 +1101,116 @@ Be specific, practical, and data-driven.
     });
   }
 };
+
+async function buildStrategyDataContext(user_id) {
+  const [
+    ga_summary,
+    ga_top_pages,
+    gsc_summary,
+    gsc_top_pages,
+    gsc_top_keywords,
+    webpages,
+  ] = await Promise.all([
+    GaSummary.findAll({
+      include: [{ model: GaOverallData, where: { user_id } }],
+      limit: 1,
+      order: [["created_at", "DESC"]],
+    }),
+    GaTopPages.findAll({
+      limit: 10,
+      order: [["screen_page_views", "DESC"]],
+    }),
+    GscSummary.findAll({
+      include: [{ model: GscOverallData, where: { user_id } }],
+      limit: 1,
+      order: [["created_at", "DESC"]],
+    }),
+    GscTopPages.findAll({
+      limit: 10,
+      order: [["impressions", "DESC"]],
+    }),
+    GscTopKeywords.findAll({
+      limit: 10,
+      order: [["impressions", "DESC"]],
+    }),
+    Webpage.findAll({
+      where: { user_id },
+      attributes: ["url", "title", "meta_description", "canonical", "h1", "h2"],
+      limit: 10,
+    }),
+  ]);
+
+  return {
+    ga_summary,
+    ga_top_pages,
+    gsc_summary,
+    gsc_top_pages,
+    gsc_top_keywords,
+    webpages,
+  };
+}
+
+
+function detectIntent(question) {
+  const q = question.toLowerCase().trim();
+
+  // STRATEGY / GUIDANCE (NO SQL)
+  if (
+    q.startsWith("how to") ||
+    q.startsWith("how can") ||
+    q.startsWith("how do") ||
+    q.startsWith("how should") ||
+    q.startsWith("what should") ||
+    q.startsWith("what can") ||
+    q.startsWith("what is the best way") ||
+    q.startsWith("which step") ||
+    q.startsWith("which steps") ||
+
+    q.includes("improve my site") ||
+    q.includes("improve my website") ||
+    q.includes("improve my page") ||
+    q.includes("improve content") ||
+    q.includes("improve seo") ||
+    q.includes("increase traffic") ||
+    q.includes("increase impressions") ||
+    q.includes("increase clicks") ||
+    q.includes("boost seo") ||
+    q.includes("optimize my site") ||
+    q.includes("optimize content") ||
+
+    q.includes("what to do first") ||
+    q.includes("what should i do first") ||
+    q.includes("next steps") ||
+    q.includes("action plan") ||
+    q.includes("steps to improve") ||
+    q.includes("things to fix") ||
+    q.includes("what is missing") ||
+    q.includes("what am i missing") ||
+
+    q.includes("why my site") ||
+    q.includes("why my page") ||
+    q.includes("why is my seo") ||
+    q.includes("reason my traffic") ||
+    q.includes("cause of low") ||
+
+    q.includes("seo strategy") ||
+    q.includes("content strategy") ||
+    q.includes("marketing strategy") ||
+    q.includes("growth strategy")
+  ) {
+    return {
+      intent: "strategy_guidance",
+      mode: "direct_answer", // 🚫 SQL
+    };
+  }
+
+  // DEFAULT → SQL
+  return {
+    intent: "data_query",
+    mode: "sql",
+  };
+}
+
 exports.getSectionWiseSummary = async (req, res) => {
   try {
     const { gaData, gscData, startDate, endDate } = req.body;
@@ -1776,6 +1886,9 @@ DO NOT filter user_id on any other table.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 SQL STRUCTURE RULE (NON-NEGOTIABLE)
+
+
+
 AGGREGATION SAFETY RULE (ABSOLUTE)
  
 - NEVER include metric columns in GROUP BY
@@ -1805,7 +1918,92 @@ The query MUST follow this exact order:
 
 The WHERE clause MUST appear
 IMMEDIATELY AFTER JOINs.
-
+WEAK SEO SIGNAL RULES (CRITICAL)
+ 
+If the question mentions:
+- "lack strong SEO signals"
+- "needs improvement"
+- "better title"
+- "better meta description"
+- "content improvement"
+- "SEO ready"
+ 
+THEN:
+ 
+You MUST detect WEAK signals, not only missing ones.
+ 
+Allowed WEAK SIGNAL definitions:
+ 
+1️⃣ Weak title:
+(
+  title IS NULL
+  OR title = ''
+  OR LENGTH(title) < 30
+)
+ 
+2️⃣ Weak meta description:
+(
+  meta_description IS NULL
+  OR meta_description = ''
+  OR LENGTH(meta_description) < 70
+)
+ 
+3️⃣ Weak heading structure:
+- jsonb_array_length(h1) = 0
+- OR jsonb_array_length(h2) < 2
+ 
+4️⃣ Weak SEO structure means ANY of the above.
+ 
+You MUST NOT require ALL conditions to be true.
+Use OR logic for weak signals.
+ 
+━━━━━━━━━━━━━━━━━━━━━━
+DECISION INSIGHT INTENT (MANDATORY)
+ 
+If the question includes phrases like:
+- "should be optimized"
+- "needs improvement"
+- "priority"
+- "highest potential"
+- "SEO ready"
+- "wasting impressions"
+- "lacks SEO signals"
+- "content improvement"
+ 
+THEN:
+ 
+SET intent = decision_insight
+ 
+DECISION_INSIGHT RULES:
+ 
+1️⃣ You MUST derive insight using thresholds:
+- High impressions: SUM(impressions) > 300
+- Low CTR: ctr < 0.03
+- Low traffic: SUM(screen_page_views) < 100
+- High traffic: SUM(screen_page_views) > 300
+ 
+2️⃣ You MUST calculate at least ONE ratio or comparison:
+- ctr = clicks / impressions
+- performance_ratio = GA views / GSC impressions
+ 
+3️⃣ You MUST rank results using ORDER BY
+- Worst first (ASC for CTR / ratios)
+- Best first (DESC for traffic / impressions)
+ 
+4️⃣ You MUST LIMIT results (5–15 rows)
+ 
+5️⃣ You MAY combine:
+- GA + GSC
+- GSC + webpages
+- GA + webpages
+ 
+6️⃣ If content structure is mentioned:
+- Use h1 = '[]'::jsonb
+- OR h2 = '[]'::jsonb
+ 
+7️⃣ NEVER return empty results by default
+If risk of zero rows:
+- Relax thresholds slightly
 ━━━━━━━━━━━━━━━━━━━━━━
 STRICT SQL SAFETY RULES
 
@@ -1839,7 +2037,8 @@ ${repairContext}
 
   const resp = await openaiClient.chat.completions.create({
     model: "gpt-4",
-    temperature: 0,
+    temperature: 0.3,
+      max_tokens: 900,
     messages: [{ role: "system", content: sqlPrompt }],
   });
 
@@ -1863,6 +2062,55 @@ ${repairContext}
   `);
 
   return sql;
+}
+async function generateStrategyAnswer({
+  question,
+  openaiClient,
+  dataContext, // 👈 NEW
+}) {
+  const prompt = `
+You are a senior SEO strategist.
+
+IMPORTANT RULES:
+- Use ONLY the data provided below
+- Do NOT assume anything not visible in the data
+- Do NOT generate SQL
+- Do NOT mention databases, tables, GA, or GSC explicitly
+- Do NOT ask follow-up questions
+- Be data-driven, not generic
+- Use numbered, actionable steps
+- If data is insufficient for a point, say so clearly
+
+====================
+AVAILABLE DATA
+====================
+${JSON.stringify(dataContext, null, 2)}
+
+====================
+USER QUESTION
+====================
+"${question}"
+
+====================
+RESPONSE FORMAT
+====================
+1. Diagnosis (based on data)
+2. What is missing / weak
+3. Priority actions (ordered)
+4. Quick wins vs long-term fixes
+`;
+
+  const resp = await openaiClient.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.25,
+    messages: [{ role: "system", content: prompt }],
+    max_tokens: 800,
+  });
+
+  return (
+    resp.choices?.[0]?.message?.content?.trim() ||
+    "Insufficient data to generate strategy."
+  );
 }
 exports.chatbotdata = async (req, res) => {
   try {
@@ -2143,6 +2391,30 @@ TABLE public.gsc_top_countries (
 
     let rawSQL;
     let rows;
+const { intent, mode } = detectIntent(question);
+
+
+if (mode === "direct_answer") {
+const dataContext = await buildStrategyDataContext(user_id);
+const answer = await generateStrategyAnswer({
+  question,
+  openaiClient,
+  dataContext,
+});
+  await ChatHistory.create({
+    user_id,
+    chat_id: chatId,
+    question,
+    answer,
+    is_deleted: false,
+  });
+
+  return res.json({
+    success: true,
+    chat_id: chatId,
+    reply: answer,
+  });
+}
 
     rawSQL = await generateSQL({
       schema,
