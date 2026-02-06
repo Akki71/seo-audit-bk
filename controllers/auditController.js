@@ -5977,9 +5977,9 @@ exports.userData = async (req, res) => {
       urls_store: domain.urls_store ? 1 : 0,
 
       // 🔐 Tokens: show only 0 or 1
-      refresh_token: domain.refresh_token ? 1 : 0,
       ga_refresh_token: domain.ga_refresh_token ? 1 : 0,
       gsc_refresh_token: domain.gsc_refresh_token ? 1 : 0,
+      gbp_token: domain.refresh_token ? 1 : 0,
     };
 
     return res.json({
