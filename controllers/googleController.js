@@ -1974,26 +1974,24 @@ No JSON.
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
 exports.getChatHistory = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { chat_id } = req.query;
-
-    if (!chat_id) {
-      return res.status(400).json({
-        success: false,
-        message: "chat_id is required",
-      });
-    }
 
     const chats = await ChatHistory.findAll({
       where: {
         user_id: userId,
-        chat_id: chat_id,
         is_deleted: false,
       },
-      attributes: ["id", "chat_id", "question", "answer", "createdAt"],
+      attributes: [
+        "id",
+        "chat_id",
+        "user_id",
+        "question",
+        "answer",
+        "is_deleted",
+        "createdAt",
+      ],
       order: [["createdAt", "ASC"]],
     });
 
@@ -2010,6 +2008,41 @@ exports.getChatHistory = async (req, res) => {
     });
   }
 };
+// exports.getChatHistory = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const { chat_id } = req.query;
+
+//     if (!chat_id) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "chat_id is required",
+//       });
+//     }
+
+//     const chats = await ChatHistory.findAll({
+//       where: {
+//         user_id: userId,
+//         chat_id: chat_id,
+//         is_deleted: false,
+//       },
+//       attributes: ["id", "chat_id", "question", "answer", "createdAt"],
+//       order: [["createdAt", "ASC"]],
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       data: chats,
+//     });
+//   } catch (error) {
+//     console.error("Get Chat History Error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch chat history",
+//     });
+//   }
+// };
 
 exports.deleteChat = async (req, res) => {
   try {
