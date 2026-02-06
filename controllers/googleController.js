@@ -1396,7 +1396,7 @@ TENANT FILTER (ABSOLUTE)
 
 Every query using public."webpages" MUST include:
 
-WHERE public."webpages"."user_id" = {{ $json.user_id }}
+WHERE public."webpages"."user_id" = ${user_id}
 
 Do NOT apply user_id filter to any other table.
 
@@ -1533,7 +1533,22 @@ DO NOT filter user_id on any other table.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 SQL STRUCTURE RULE (NON-NEGOTIABLE)
-
+AGGREGATION SAFETY RULE (ABSOLUTE)
+ 
+- NEVER include metric columns in GROUP BY
+- Metric columns include (but are not limited to):
+  - screen_page_views
+  - impressions
+  - clicks
+  - sessions
+  - users
+  - ctr
+  - position
+- ALL metric columns MUST be aggregated using:
+  SUM(), AVG(), MIN(), or MAX()
+- GROUP BY is allowed ONLY on:
+  - page identifiers (url, page_path, keys, title)
+  - dimensions (country, device, keyword, date)
 The query MUST follow this exact order:
 
 1. SELECT
@@ -2008,68 +2023,42 @@ exports.getChatHistory = async (req, res) => {
     });
   }
 };
-// exports.getChatHistory = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const { chat_id } = req.query;
-
-//     if (!chat_id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "chat_id is required",
-//       });
-//     }
-
-//     const chats = await ChatHistory.findAll({
-//       where: {
-//         user_id: userId,
-//         chat_id: chat_id,
-//         is_deleted: false,
-//       },
-//       attributes: ["id", "chat_id", "question", "answer", "createdAt"],
-//       order: [["createdAt", "ASC"]],
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       data: chats,
-//     });
-//   } catch (error) {
-//     console.error("Get Chat History Error:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch chat history",
-//     });
-//   }
-// };
 
 exports.deleteChat = async (req, res) => {
   try {
-    const { chatId } = req.params;
     const userId = req.user.id;
 
-    const [updatedCount] = await ChatHistory.update(
+    const chats = await ChatHistory.findAll({
+      where: {
+        user_id: userId,
+        is_deleted: false,
+      },
+      attributes: ["chat_id"],
+    });
+
+    if (!chats.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No chats found or already deleted",
+      });
+    }
+
+    const chatIds = chats.map((c) => c.chat_id);
+
+    // 2️⃣ Mark them as deleted
+    await ChatHistory.update(
       { is_deleted: true },
       {
         where: {
-          chat_id: chatId,
+          chat_id: chatIds,
           user_id: userId,
-          is_deleted: false,
         },
       },
     );
 
-    if (updatedCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Chat not found or already deleted",
-      });
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Chat cleared successfully",
+      message: "Chats cleared successfully",
     });
   } catch (error) {
     console.error("Delete Chat Error:", error);

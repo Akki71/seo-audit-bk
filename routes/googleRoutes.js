@@ -111,7 +111,7 @@ router.post(
 );
 router.post("/chat/ai-chat-send", authenticateToken, chatbotdata);
 router.get("/chat/history", authenticateToken, getChatHistory);
-router.delete("/chat/:chatId", authenticateToken, deleteChat);
+router.delete("/chat/deleteChat", authenticateToken, deleteChat);
 
 router.get("/pages", authenticateToken, getPageData);
 
