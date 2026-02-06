@@ -1662,18 +1662,13 @@ COLUMN DATA TYPE & EMPTY VALUE RULES (CRITICAL)
     h1 = '[]'::jsonb
     h2 = '[]'::jsonb
 
-━━━━━━━━━━━━━━━━━━━━━━
-REQUIRED CONDITIONS (DO NOT MODIFY)
-
-To detect pages with missing H2 tags, use ONLY:
-
-SELECT *
-FROM public."webpages"
-WHERE public."webpages"."h2" = '[]'::jsonb;
-
-━━━━━━━━━━━━━━━━━━━━━━
 ━━━━━━━━━━━━━━━━━
 TEXT DATA TYPE NULLABILITY RULE (ABSOLUTE)
+
+━━━━━━━━━━━━━━━━━━━━━━
+DATA TYPE NULLABILITY & EMPTY VALUE RULES (ABSOLUTE – NON-NEGOTIABLE)
+
+TEXT / VARCHAR COLUMNS
 
 For ANY column with data type TEXT or VARCHAR:
 
@@ -1681,7 +1676,7 @@ For ANY column with data type TEXT or VARCHAR:
   - NULL
   - empty string ''
 
-- When checking for missing / empty TEXT values,
+- When checking for missing or empty TEXT values,
   you MUST ALWAYS check BOTH conditions.
 
 MANDATORY pattern for TEXT columns:
@@ -1691,15 +1686,125 @@ MANDATORY pattern for TEXT columns:
 )
 
 FORBIDDEN patterns:
-- column_name IS NULL   (alone)
-- column_name = ''      (alone)
+- column_name IS NULL        (alone)
+- column_name = ''           (alone)
 
-This rule applies to (but is not limited to):
-- title
-- meta_description
-- canonical
-- url
-- domainId
+━━━━━━━━━━━━━━━━━━━━━━
+BOOLEAN COLUMNS
+
+For ANY column with data type BOOLEAN:
+
+- Values MAY be:
+  - true
+  - false
+  - NULL
+
+- NULL does NOT imply false
+
+MANDATORY pattern for FALSE or missing values:
+(
+  column_name IS NULL
+  OR column_name = false
+)
+
+MANDATORY pattern for TRUE values:
+column_name = true
+
+FORBIDDEN patterns:
+- column_name IS NULL        (alone)
+- column_name = false        (alone)
+- NOT column_name
+
+━━━━━━━━━━━━━━━━━━━━━━
+JSONB COLUMNS
+
+JSONB ARRAY COLUMNS (e.g. h1, h2)
+
+- Empty array is represented as:
+  '[]'::jsonb
+
+- NULL MAY also exist
+
+MANDATORY pattern for EMPTY or missing JSONB ARRAY:
+(
+  column_name IS NULL
+  OR column_name = '[]'::jsonb
+)
+
+FORBIDDEN patterns:
+- column_name = []
+- jsonb_array_length(column_name) = 0
+- column_name IS NULL        (alone)
+
+━━━━━━━━━━━━━━━━━━━━━━
+JSONB OBJECT COLUMNS
+
+- Empty object is represented as:
+  '{}'::jsonb
+
+- NULL MAY also exist
+
+MANDATORY pattern for EMPTY or missing JSONB OBJECT:
+(
+  column_name IS NULL
+  OR column_name = '{}'::jsonb
+)
+
+FORBIDDEN patterns:
+- column_name = {}
+- jsonb_object_length(column_name) = 0
+- column_name IS NULL        (alone)
+
+━━━━━━━━━━━━━━━━━━━━━━
+INTEGER / BIGINT / SMALLINT COLUMNS
+
+- Missing or invalid values MAY be stored as:
+  - NULL
+  - 0   (zero used as sentinel)
+
+MANDATORY pattern for MISSING or zero-value checks:
+(
+  column_name IS NULL
+  OR column_name = 0
+)
+
+MANDATORY pattern for VALID positive values:
+column_name > 0
+
+FORBIDDEN patterns:
+- column_name IS NULL        (alone)
+- column_name = 0            (alone)
+
+━━━━━━━━━━━━━━━━━━━━━━
+FLOAT / DOUBLE PRECISION COLUMNS
+
+- Missing or invalid values MAY be stored as:
+  - NULL
+  - 0.0
+
+MANDATORY pattern for missing or zero-value checks:
+(
+  column_name IS NULL
+  OR column_name = 0
+)
+
+MANDATORY pattern for VALID values:
+column_name > 0
+
+━━━━━━━━━━━━━━━━━━━━━━
+NUMERIC DIVISION SAFETY RULE (ABSOLUTE)
+
+For ANY numeric division:
+
+MANDATORY pattern:
+numerator / NULLIF(denominator, 0)
+
+FORBIDDEN patterns:
+- numerator / denominator
+- division without NULLIF
+
+━━━━━━━━━━━━━━━━━━━━━━
+
 ---------------------------------
 CONTENT QUALITY ANALYSIS RULES
 
@@ -1890,6 +1995,39 @@ DO NOT filter user_id on any other table.
 SQL STRUCTURE RULE (NON-NEGOTIABLE)
 
 
+━━━━━━━━━━━━━━━━━━━━━━
+ROW DEDUPLICATION & AGGREGATION RULE (ABSOLUTE)
+
+When joining public."webpages" with GA or GSC tables:
+
+- GA and GSC tables MAY contain MULTIPLE rows per page
+- Direct joins WITHOUT aggregation WILL cause duplicate URLs
+- Duplicate URLs in results are FORBIDDEN
+
+MANDATORY RULES:
+
+1️⃣ If GA or GSC tables are joined:
+- You MUST aggregate their metrics using:
+  - SUM()
+  - MAX()
+  - MIN()
+  - AVG()
+
+2️⃣ The final result MUST return:
+- EXACTLY ONE ROW per webpage URL
+
+3️⃣ FORBIDDEN:
+- GROUP BY ga_top_pages columns
+- GROUP BY gsc_top_pages columns
+- Returning raw GA or GSC rows
+
+4️⃣ REQUIRED GROUP BY:
+GROUP BY
+  public."webpages"."url",
+  public."webpages"."title"
+
+ONLY webpages columns are allowed in GROUP BY.
+
 
 AGGREGATION SAFETY RULE (ABSOLUTE)
  
@@ -2038,7 +2176,7 @@ ${repairContext}
 `;
 
   const resp = await openaiClient.chat.completions.create({
-    model: "gpt-4",
+    model: "gpt-4o-mini",
     temperature: 0.3,
       max_tokens: 900,
     messages: [{ role: "system", content: sqlPrompt }],
