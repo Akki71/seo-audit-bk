@@ -1161,6 +1161,214 @@ exports.getSectionWiseSummary = async (req, res) => {
     });
   }
 };
+const tableDescription =
+`
+table =  ga_overall_data
+| Column       | Description         
+ 'id'         = Primary key for the GA report record  
+ 'user_id'    = User who owns this GA data            
+ 'brand_id'   = Brand/domain this GA data belongs to 
+ 'start_date' = Report start date                    
+ 'end_date'   = Report end date
+ ------------ ----------------------------------------------- 
+
+table =gsc_overall_data
+| Column      | Description
+
+ 'id'         = Primary key for the GA report record 
+ 'user_id'    = User who owns this GA data           
+ 'brand_id'   = Brand/domain this GA data belongs to 
+ 'start_date' = Report start date                    
+ 'end_date'   = Report end date                 
+
+ ------------ ----------------------------------------------- 
+
+table = seo_summaries 
+| Column      | Description                                     
+
+ 'id'         = Unique UUID for each SEO summary                
+ 'user_id'    = User who generated the summary                  
+ 'domain'     = Domain name for which summary was generated     
+ 'summary'    = JSON SEO summary (AI output, metrics, insights) 
+ ------------------------------------------------ 
+ 
+table = urls
+| Column     | Description             
+
+ 'id'       = Primary key             
+ 'domainId' = Brand/domain identifier 
+ 'url'      = Full page URL           
+ 'user_id'  = User who owns this URL  
+
+ ------------------------------------------------ 
+
+table = users 
+| Column           | Description                        
+
+ 'id'             = Primary key                        
+ 'assistant_id'   = AI assistant identifier (if any)   
+ 'username'       = Unique username                    
+ 'email'          = User email address                 
+ 'password'       = Hashed password                    
+ 'isVerified'     = Whether email is verified          
+ 'otp'            = One-time password for verification 
+ 'otpExpires'     = OTP expiry time                    
+ 'brand_register' = Flag indicating brand registration 
+
+ ------------------------------------------------ 
+
+TABLE =webpages
+| Column             | Description                    
+
+  'id'               =  Primary key                     
+  'domainId'         =  Brand/domain identifier         
+  'date'             =  Crawl date                      
+  'url'              = Page URL                        
+  'title'            = Page title                      
+  'meta_description' = Meta description                
+  'body_text'        = Extracted page content          
+  'canonical'        = Canonical URL                   
+  'h1'               = JSON array of H1 tags           
+  'h2'               = JSON array of H2 tags                       
+  'embedding'        = Vector embedding for AI search  
+  'user_id'          = Owner user                      
+
+
+ ------------------------------------------------ 
+
+TABLE=brands 
+| Column              | Description                      
+ 
+ 'id'                = Primary key                      
+ 'user_id'           = Owner user                       
+ 'brand_name'        = Brand name                       
+ 'domain'            = JSON list of domains             
+ 'region'            = Target regions                   
+ 'status'            = Active/inactive brand            
+ 'keywords'          = Target keywords                  
+ 'localArea'         = Whether brand targets local area 
+ 'cities'            = Target cities                    
+ 'image_url'         = Brand favicon/logo               
+ 'domain_authority'  = Domain authority data            
+ 'refresh_token'     = OAuth refresh token              
+ 'ga_refresh_token'  = GA refresh token                 
+ 'gbp_refresh_token' = Google Business Profile token    
+ 'gsc_refresh_token' = GSC refresh token                
+ 'property_id'       = GA4 property ID                  
+ 'site_url'          = Site URL                         
+ 'country'           = Country name                     
+ 'country_code'      = Country code                     
+
+
+ ------------------------------------------------ 
+
+table = ga_channels 
+| Column                          | Description            
+
+ 'ga_overall_id'                 = Reference to GA report 
+ 'session_default_channel_group' = Channel name           
+ 'total_users'                   = Users from channel     
+ 'sessions'                      = Sessions from channel  
+ ------------------------------------------------ 
+
+TABLE =ga_conversions
+| Column                     | Description           
+ 'ga_overall_id'            = Reference to GA report
+ 'transactions'             = Number of conversions 
+ 'total_revenue'            = Revenue generated     
+ 'session_conversion_rate'  = Conversion rate       
+ 'average_purchase_revenue' = Avg order value  
+ --------------------------------------------- 
+ 
+ table= ga_devices
+ | Column            | Description               
+ 'ga_overall_id'   = Reference to GA report
+ 'device_category' = Desktop / Mobile / Tablet 
+ 'sessions'        = Sessions from device   
+ --------------------------------------------- 
+
+  table= ga_summary
+ | Column            | Description               
+ 'ga_overall_id'            = Reference to GA report 
+ 'total_users'              = Total users          
+ 'sessions'                 = Total sessions       
+ 'screen_page_views'        = Page views           
+ 'bounce_rate'              = Bounce rate          
+ 'average_session_duration' = Avg session duration    
+------------------------------------------ 
+
+ table=ga_top_countries
+ | Column     | Description        
+
+ 'ga_overall_id' = Reference to GA report 
+ 'keys'     	   = Country name       
+ 'sessions' 	   = Sessions           
+ 'ctr'      	   = Click-through rate 
+ 'position' 	   = Avg position       
+------------------------------------------ 
+
+  table=ga_top_pages
+ | Column            | Description        
+ 'ga_overall_id'     = Reference to GA report 
+ 'page_path'     	   = Page path        
+ 'screen_page_views' = Views   
+ 
+| --------------------------------------
+
+   table=gsc_devices
+ | Column        | Description        |
+ 'gsc_overall_id' = Reference to GSC report
+ 'keys'           = Device type        
+ 'clicks'         = Clicks             
+ 'impressions'    = Impressions        
+ 'ctr'            = Click-through rate 
+ 'position'       = Avg position   
+
+
+ --------------------------------------------
+
+table=gsc_summary
+
+| Column           | Description             |
+ 'gsc_overall_id' = Reference to GSC report 
+ 'summary_name'   = Metric group name       
+ 'clicks'         = Total clicks      
+ 'impressions'    = Total impressions 
+ 'ctr'            = CTR              
+ 'position'       = Avg position    
+ ------------------------------- 
+
+table=gsc_top_countries
+| Column        | Description |
+ 'gsc_overall_id' = Reference to GSC report     
+ 'keys'           = Country     
+ 'clicks'         = Clicks      
+ 'impressions'    = Impressions 
+ 'ctr'            = CTR          
+ 'position'       = Avg position 
+
+---------------------------------
+table=gsc_top_keywords
+| Column        | Description  |
+
+ 'gsc_overall_id' = Reference to GSC report    
+ 'keys'           = Search query 
+ 'clicks'         = Clicks       
+ 'impressions'    = Impressions  
+ 'ctr'            = CTR          
+'position'        = Avg position 
+
+---------------------------------
+table=gsc_top_pages
+| Column        | Description  |
+
+ 'gsc_overall_id' = Reference to GSC report    
+ 'keys'           = Search pages 
+ 'clicks'         = Clicks       
+ 'impressions'    = Impressions  
+ 'ctr'            = CTR          
+'position'        = Avg position 
+`
 async function generateSQL({
   schema,
   question,
@@ -1208,7 +1416,8 @@ FIX RULES:
 
 // SCHEMA:
 // ${schema}
-
+table description 
+${tableDescription}
 // QUESTION:
 // ${question}
 You are an expert PostgreSQL analytics query generator.
@@ -1280,6 +1489,31 @@ Columns available for analytics:
 - user_id (TENANT FILTER — REQUIRED)
 
 This table stores the REAL PAGE CONTENT of the website.
+GA_ANALYSIS INTENT (MANDATORY)
+
+If the user question mentions:
+- "GA"
+- "Google Analytics"
+- "traffic"
+- "sessions"
+- "users"
+- "page views"
+- "engagement"
+
+THEN:
+
+- You MUST use Google Analytics tables
+- You MUST NOT use public."webpages" as the primary source
+- Allowed GA tables:
+  - public."ga_overall_data"
+  - public."ga_summary"
+  - public."ga_channels"
+  - public."ga_devices"
+  - public."ga_top_pages"
+  - public."ga_top_countries"
+
+- public."webpages" MAY ONLY be used as a LEFT JOIN
+  for URL or title enrichment
 
 ━━━━━━━━━━━━━━━━━━━━━━
 CONTENT_QUALITY INTENT (MANDATORY RULES)
@@ -1289,6 +1523,15 @@ You MUST use public."webpages" as the PRIMARY source.
 Do NOT use embeddings.
 Do NOT invent content signals.
 Use ONLY numeric and structural signals.
+
+CONTENT_QUALITY INTENT OVERRIDE RULE
+
+If intent = ga_analysis
+OR question explicitly references GA,
+THEN:
+- IGNORE content quality rules
+- DO NOT analyze h1, h2, title, meta_description, canonical
+- DO NOT compute content length metrics
 
 ━━━━━━━━━━━━━━━━━━━━━━
 COLUMN DATA TYPE & EMPTY VALUE RULES (CRITICAL)
