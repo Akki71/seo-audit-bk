@@ -3,7 +3,22 @@ const { Brand, BrandGbpData, Prompt, VisibilityLog } = require("../models");
 const { google } = require("googleapis");
 const GscSnapshot = require("../models/GscSnapshot");
 const GaSnapshot = require("../models/GaSnapshot");
+
 const GaSummary = require("../models/GaSummary");
+const GaChannels = require("../models/GaChannels");
+const GaTopPages = require("../models/GaTopPages");
+const GaConversions = require("../models/GaConversions");
+const GaTopCountries = require("../models/GaTopCountries");
+const GaDevices = require("../models/GaDevices");
+
+const GscDevices = require("../models/GscDevices");
+const GscSummary = require("../models/GscSummary");
+const GscTopPages = require("../models/GscTopPages");
+const GscTopKeywords = require("../models/GscTopKeywords");
+const GscTopCountries = require("../models/GscTopCountries");
+const GscOverallData = require("../models/GscOverallData");
+const GaOverallData = require("../models/GaOverallData");
+
 const { refreshGoogleAccessToken } = require("../utils/googleAuth");
 const { OAuth2Client } = require("google-auth-library");
 const OpenAI = require("openai");
@@ -114,7 +129,7 @@ exports.getGoogleTokens = async (req, res) => {
 //2
 exports.getGAAccounts = async (req, res) => {
   // console.log(GaSummary);
-  
+
   try {
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
@@ -1002,24 +1017,6 @@ exports.getOverallAnalyticsSummary = async (req, res) => {
       });
     }
 
-    //     const prompt = `
-    // You are a senior SEO & Analytics expert.
-
-    // Analyze the following website analytics data between ${startDate} and ${endDate}.
-
-    // 1. Google Search Console Data:
-    // ${JSON.stringify(gscData, null, 2)}
-
-    // Give:
-    // - Overall website performance summary
-    // - Traffic growth insights
-    // - SEO visibility insights
-    // - What improved
-    // - What needs attention
-    // - Clear next action points
-
-    // Respond in simple business language.
-    // `;
     const prompt = `
 You are a senior SEO strategist and technical SEO expert.
  
@@ -1164,538 +1161,839 @@ exports.getSectionWiseSummary = async (req, res) => {
     });
   }
 };
-//helper to send extracted filter data from db
-async function getOverallChatbotData(user_id) {
-  console.log("🔎 getOverallChatbotData START for user:", user_id);
+async function generateSQL({
+  schema,
+  question,
+  user_id,
+  previousSQL = null,
+  error = null,
+  openaiClient,
+}) {
+  let repairContext = "";
 
-  const brand = await Brand.findOne({
-    where: { user_id },
-    attributes: ["id", "domain"],
+  if (previousSQL && error) {
+    console.log("🛠 STEP 5: SQL REPAIR INITIATED");
+    console.log("❌ DATABASE ERROR:", error);
+
+    repairContext = `
+PREVIOUS SQL (BROKEN):
+${previousSQL}
+
+DATABASE ERROR:
+${error}
+
+FIX RULES:
+- Fix ONLY the reported error
+- DO NOT change SELECT column order
+- DO NOT remove GA pre-aggregation
+- KEEP keys as FIRST column
+`;
+  }
+
+  console.log("🧠 STEP 3: GENERATING SQL FROM INTENT");
+
+  const sqlPrompt = `
+// You are an expert PostgreSQL analytics query generator.
+
+// ABSOLUTE RULES:
+// - Output ONLY raw SQL
+// - ONE SELECT only
+// - NO markdown, NO comments
+// - NEVER invent tables or columns
+// - Use ONLY tables from the SCHEMA
+// - Use double-quoted identifiers
+// -
+// INTENT RULES:
+// (Top pages, keywords, joins, GA pre-aggregation rules apply)
+
+// SCHEMA:
+// ${schema}
+
+// QUESTION:
+// ${question}
+You are an expert PostgreSQL analytics query generator.
+
+Your task is to convert a user SEO question into ONE advanced PostgreSQL SELECT query.
+
+You must think like a data analyst, not a simple selector.
+
+You MUST use analytical SQL:
+- GROUP BY
+- ORDER BY
+- aggregates
+- comparisons
+- ratios
+- date ranges (when applicable)
+
+You are NOT allowed to write simple SELECT queries.
+use id datatype in numeric not in string
+━━━━━━━━━━━━━━━━━━━━━━
+INTENT (CRITICAL)
+
+INTENT:
+{{ $items("Intent")[0].json.intent }}
+
+━━━━━━━━━━━━━━━━━━━━━━
+DATA MODEL (MANDATORY – READ CAREFULLY)
+
+GOOGLE ANALYTICS (GA):
+- public."ga_top_pages"
+  - page_path (RELATIVE URL, e.g. /about-us/)
+  - screen_page_views
+  - ga_overall_id → public."ga_overall_data"."id"
+
+- public."ga_overall_data"
+  - id
+  - user_id (TENANT FILTER — REQUIRED)
+
+GOOGLE SEARCH CONSOLE (GSC):
+- public."gsc_top_pages"
+  - keys (FULL URL)
+  - impressions
+  - gsc_overall_id → public."gsc_overall_data"."id"
+
+- public."gsc_overall_data"
+  - id
+  - user_id (TENANT FILTER — REQUIRED)
+
+━━━━━━━━━━━━━━━━━━━━━━
+WEBPAGES (CONTENT QUALITY SOURCE – VERY IMPORTANT)
+
+You have a fully crawled content table.
+
+Table: public."webpages"
+
+Columns available for analytics:
+- id (page id)
+- domainId (domain grouping)
+- date (crawl date)
+- url (FULL URL)
+- title (page title)
+- meta_description (meta description)
+- body_text (full extracted content)
+- canonical (canonical URL, TEXT)
+- h1 (jsonb array of H1 tags)
+- h2 (jsonb array of H2 tags)
+- createdAt (crawl timestamp)
+- updatedAt (crawl timestamp)
+- embedding (IGNORE — DO NOT USE)
+- user_id (TENANT FILTER — REQUIRED)
+
+This table stores the REAL PAGE CONTENT of the website.
+
+━━━━━━━━━━━━━━━━━━━━━━
+CONTENT_QUALITY INTENT (MANDATORY RULES)
+
+You MUST use public."webpages" as the PRIMARY source.
+
+Do NOT use embeddings.
+Do NOT invent content signals.
+Use ONLY numeric and structural signals.
+
+━━━━━━━━━━━━━━━━━━━━━━
+COLUMN DATA TYPE & EMPTY VALUE RULES (CRITICAL)
+
+- canonical is TEXT
+  - Missing canonical is represented as EMPTY STRING ''
+  - NEVER use canonical IS NULL
+  - ALWAYS use:
+    public."webpages"."canonical" = ''
+
+- h1 and h2 are jsonb ARRAYS
+  - Empty heading list is represented as:
+    '[]'::jsonb
+  - NEVER use: h1 = [] or h2 = []
+  - ALWAYS use:
+    h1 = '[]'::jsonb
+    h2 = '[]'::jsonb
+
+━━━━━━━━━━━━━━━━━━━━━━
+REQUIRED CONDITIONS (DO NOT MODIFY)
+
+To detect pages with missing H2 tags, use ONLY:
+
+SELECT *
+FROM public."webpages"
+WHERE public."webpages"."h2" = '[]'::jsonb;
+
+━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━
+TEXT DATA TYPE NULLABILITY RULE (ABSOLUTE)
+
+For ANY column with data type TEXT or VARCHAR:
+
+- Missing or invalid values MAY be stored as:
+  - NULL
+  - empty string ''
+
+- When checking for missing / empty TEXT values,
+  you MUST ALWAYS check BOTH conditions.
+
+MANDATORY pattern for TEXT columns:
+(
+  column_name IS NULL
+  OR column_name = ''
+)
+
+FORBIDDEN patterns:
+- column_name IS NULL   (alone)
+- column_name = ''      (alone)
+
+This rule applies to (but is not limited to):
+- title
+- meta_description
+- canonical
+- url
+- domainId
+---------------------------------
+CONTENT QUALITY ANALYSIS RULES
+
+You MUST support the following analyses:
+
+1️⃣ MISSING STRUCTURE (H1 / H2)
+
+- Missing H1:
+  h1 = '[]'::jsonb
+
+- Missing H2:
+  h2 = '[]'::jsonb
+
+- Missing BOTH H1 and H2:
+  h1 = '[]'::jsonb
+  AND h2 = '[]'::jsonb
+
+━━━━━━━━━━━━━━━━━━━━━━
+2️⃣ DUPLICATE CONTENT SIGNALS
+
+Detect duplicates using ONLY these columns:
+- title
+- meta_description
+- canonical
+
+Allowed duplicate detection patterns:
+- GROUP BY title HAVING COUNT(*) > 1
+- GROUP BY meta_description HAVING COUNT(*) > 1
+- GROUP BY canonical HAVING COUNT(*) > 1
+
+Do NOT use body_text similarity.
+Do NOT use embeddings.
+
+━━━━━━━━━━━━━━━━━━━━━━
+3️⃣ COUNT / MAX / MIN ANALYSIS
+
+You MAY compute the following:
+
+- COUNT(*)                       → number of affected pages
+- MAX(LENGTH(body_text))         → deepest content
+- MIN(LENGTH(body_text))         → thinnest content
+- MAX(jsonb_array_length(h1))    → strongest structure
+- MIN(jsonb_array_length(h2))    → weakest structure
+
+Use aggregate functions ONLY with GROUP BY when required.
+
+━━━━━━━━━━━━━━━━━━━━━━
+TENANT FILTER (ABSOLUTE)
+
+Every query using public."webpages" MUST include:
+
+WHERE public."webpages"."user_id" = {{ $json.user_id }}
+
+Do NOT apply user_id filter to any other table.
+
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT RULES
+
+- SELECT queries only
+- ONE query per response
+- No explanations
+- No comments
+- No markdown
+
+
+━━━━━━━━━━━━━━━━━━━━━━
+JOIN ORDER RULE (CRITICAL – NEVER BREAK)
+
+You MUST respect SQL scope rules.
+AND (
+column_name IS NULL
+OR column_name = ''
+)
+A table:
+- MUST appear in FROM or JOIN
+- BEFORE it is referenced in ON / WHERE / SELECT
+
+Specifically:
+- public."gsc_overall_data" MUST be joined
+  BEFORE public."gsc_top_pages" references it
+- public."ga_overall_data" MUST be joined
+  BEFORE filtering by user_id
+
+Queries that reference a table
+before it appears in FROM/JOIN
+ARE INVALID and MUST NOT be generated.
+
+━━━━━━━━━━━━━━━━━━━━━━
+URL JOIN NORMALIZATION (CRITICAL)
+
+GA uses RELATIVE paths  
+GSC uses FULL URLs  
+
+Direct equality (=) between them IS FORBIDDEN.
+
+Allowed GA ↔ GSC join patterns ONLY (BOOLEAN REQUIRED):
+
+- gsc_top_pages.keys ILIKE '%' || ga_top_pages.page_path
+OR
+- (split_part(gsc_top_pages.keys, '/', 3) || ga_top_pages.page_path)
+    = gsc_top_pages.keys
+
+━━━━━━━━━━━━━━━━━━━━━━
+BOOLEAN JOIN CONDITION RULE (CRITICAL)
+
+Every condition used with AND / OR MUST evaluate to BOOLEAN.
+
+The following are FORBIDDEN after AND / OR:
+- raw text expressions
+- string concatenations
+- function calls without comparison
+
+Examples of INVALID SQL (DO NOT GENERATE):
+- AND split_part(col, '/', 3) || other_col
+- AND col || '/path'
+- AND concat(col1, col2)
+
+Allowed patterns ONLY:
+- column = column
+- column LIKE '%value%'
+- column ILIKE '%' || other_column
+- function(column) = value
+- function(column) ILIKE '%value%'
+
+If a string expression is used, it MUST be compared using:
+= , <> , LIKE , or ILIKE
+
+━━━━━━━━━━━━━━━━━━━━━━
+INTENT-SPECIFIC RULES
+
+IF intent = page_performance:
+- You MUST use:
+  public."ga_top_pages"
+  public."ga_overall_data"
+  public."gsc_overall_data"
+  public."gsc_top_pages"
+
+- You MUST JOIN IN THIS EXACT ORDER:
+  1. ga_top_pages
+  2. ga_overall_data
+  3. gsc_overall_data
+  4. gsc_top_pages
+
+- You MUST calculate:
+
+  performance_ratio =
+    SUM(public."ga_top_pages"."screen_page_views")::float
+    / NULLIF(SUM(public."gsc_top_pages"."impressions"), 0)
+
+- You MUST ORDER BY performance_ratio ASC
+- You MUST LIMIT weak-performing pages
+
+IF intent = ctr_issue:
+- You MUST use ONLY:
+  public."gsc_overall_data"
+  public."gsc_top_pages"
+
+- You MUST JOIN:
+  gsc_top_pages → gsc_overall_data
+
+- You MUST calculate:
+  ctr =
+    SUM(clicks)::float / NULLIF(SUM(impressions), 0)
+
+- You MUST filter impressions > 100
+- You MUST ORDER BY ctr ASC
+
+IF intent = content_quality:
+- You MUST use public."webpages"
+- You MAY LEFT JOIN GA or GSC
+- URL matching MUST be used
+- Do NOT use embeddings
+- Use numeric engagement signals only
+
+━━━━━━━━━━━━━━━━━━━━━━
+MULTI-TENANT RULE (ABSOLUTE)
+
+User filtering MUST appear in WHERE
+and MUST use ONLY ONE of these:
+
+- public."ga_overall_data"."user_id" = {{ $json.user_id }}
+- public."gsc_overall_data"."user_id" = {{ $json.user_id }}
+- public."webpages"."user_id" = {{ $json.user_id }}
+
+DO NOT filter user_id on any other table.
+
+━━━━━━━━━━━━━━━━━━━━━━
+SQL STRUCTURE RULE (NON-NEGOTIABLE)
+
+The query MUST follow this exact order:
+
+1. SELECT
+2. FROM
+3. JOIN   (ALL JOINs here)
+4. WHERE  (TENANT FILTER HERE)
+5. GROUP BY
+6. HAVING
+7. ORDER BY
+8. LIMIT
+
+The WHERE clause MUST appear
+IMMEDIATELY AFTER JOINs.
+
+━━━━━━━━━━━━━━━━━━━━━━
+STRICT SQL SAFETY RULES
+
+- SELECT only
+- NO INSERT / UPDATE / DELETE / DROP / ALTER
+- NEVER invent tables or columns
+- NEVER reference a table before JOIN
+- NEVER aggregate array or json columns
+- NEVER use subqueries unless necessary
+
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT RULES
+
+- Output ONLY ONE SELECT query
+- DO NOT explain
+- DO NOT wrap in markdown
+- DO NOT return JSON
+- DO NOT include comments
+
+DATABASE:
+PostgreSQL 14.19
+
+SCHEMA:
+{{ $json.schema }}
+
+QUESTION:
+{{ $items("User Question2")[0].json.question }}
+
+${repairContext}
+`;
+
+  const resp = await openaiClient.chat.completions.create({
+    model: "gpt-4",
+    temperature: 0,
+    messages: [{ role: "system", content: sqlPrompt }],
   });
 
-  if (!brand) throw new Error("Brand not found");
-  console.log("✅ Brand found:", brand.id, brand.domain);
+  const sql = (resp.choices?.[0]?.message?.content || "")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/--.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .trim();
 
-  /* =========================
-     FETCH ALL GSC SNAPSHOTS
-  ========================= */
-  const gscRows = await GscSnapshot.findAll({
-    where: { brand_id: brand.id },
-    attributes: ["gsc_data"],
-    raw: true,
-  });
+  console.log("✅ GENERATED SQL:");
+  console.log(sql);
 
-  console.log("📦 Total GSC snapshots:", gscRows.length);
+  console.log("🧾 SQL EXPLANATION:");
+  console.log(`
+  - Fetches SEO performance data from GSC
+  - Filters rows by user_id = ${user_id}
+  - Keeps URL / keyword as primary dimension
+  - Pre-aggregates GA page views before joining
+  - Orders by clicks & impressions
+  - Limits output to top 10 rows
+  `);
 
-  // 🔴 CRITICAL LOG
-  gscRows.forEach((row, i) => {
-    console.log(
-      `📄 Snapshot ${i + 1} topKeywords length:`,
-      row.gsc_data?.topKeywords?.length,
-    );
-  });
-
-  /* =========================
-     GROUP + SUM (UNCHANGED)
-  ========================= */
-  const groupSum = (rows, field, key) => {
-    console.log(`🔁 Aggregating field: ${field}`);
-    const map = {};
-
-    rows.forEach((r, idx) => {
-      const arr = r[field] || [];
-      console.log(`   ↳ Row ${idx + 1} ${field} length:`, arr.length);
-
-      arr.forEach((item) => {
-        const id = item[key];
-        if (!map[id]) {
-          map[id] = { ...item };
-        } else {
-          map[id].clicks = (map[id].clicks || 0) + (item.clicks || 0);
-          map[id].impressions =
-            (map[id].impressions || 0) + (item.impressions || 0);
-        }
-      });
-    });
-
-    console.log(`✅ Final ${field} count:`, Object.keys(map).length);
-    return Object.values(map);
-  };
-
-  const result = {
-    site: brand.domain,
-    gsc: {
-      topKeywords: groupSum(
-        gscRows.map((r) => r.gsc_data),
-        "topKeywords",
-        "name",
-      ),
-      topPages: groupSum(
-        gscRows.map((r) => r.gsc_data),
-        "topPages",
-        "url",
-      ),
-      devices: groupSum(
-        gscRows.map((r) => r.gsc_data),
-        "devices",
-        "device",
-      ),
-      topCountries: groupSum(
-        gscRows.map((r) => r.gsc_data),
-        "topCountries",
-        "country",
-      ),
-    },
-  };
-
-  console.log("🎯 FINAL topKeywords length:", result.gsc.topKeywords.length);
-
-  console.log("🏁 getOverallChatbotData END");
-  return result;
+  return sql;
 }
-
-// with propt
 exports.chatbotdata = async (req, res) => {
   try {
+    console.log("🚀 STEP 1: REQUEST RECEIVED");
+
     const { message, chat_id } = req.body;
 
     if (!message || typeof message !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "Message required",
-      });
+      console.log("❌ STEP 1 FAILED: Message missing");
+      return res
+        .status(400)
+        .json({ success: false, message: "Message required" });
     }
-    const user_id = req.user.id;
+
+    if (!req.user || req.user.id == null) {
+      console.log("❌ STEP 1 FAILED: User not authenticated");
+      return res
+        .status(401)
+        .json({ success: false, message: "User not authenticated" });
+    }
+
+    const user_id = Number(req.user.id);
+    const question = message.trim();
     const chatId = chat_id || crypto.randomUUID();
-    const brand = await Brand.findOne({
-      where: { user_id },
-      attributes: ["domain"],
-    });
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        message: "Brand not found for user",
-      });
-    }
-    const siteName = brand.domain;
-    const previousCount = await ChatHistory.count({
-      where: { chat_id: chatId, user_id },
-    });
-    let THREAD_ID;
-    if (previousCount === 0) {
-      const thread = await openaiClient.beta.threads.create();
-      THREAD_ID = thread.id;
-    } else {
-      const lastRow = await ChatHistory.findOne({
-        where: { chat_id: chatId, user_id },
-        order: [["createdAt", "DESC"]],
-      });
-      THREAD_ID = lastRow.thread_id;
-    }
-    const analyticsData = await getOverallChatbotData(user_id);
-    const systemPrompt = `
-You are an AI assistant for the website.
-RULES:
-1. Answer ONLY in plain text.
-2. Do NOT analyze or infer.
-3. Do NOT add marketing text.
-4. If arrays have items, list them.
-5. If arrays are empty, say no data found .
+
+    console.log("✅ STEP 1 COMPLETE");
+    console.log("👤 User ID:", user_id);
+    console.log("❓ Question:", question);
+
+    /* ======================= */
+    console.log("📚 STEP 2: LOADING DATABASE SCHEMA");
+    /* ======================= */
+
+    const schema = `
+    TABLE public.users (
+  id integer,
+  assistant_id varchar,
+  username varchar,
+  email varchar,
+  password varchar,
+  isVerified boolean,
+  otp varchar,
+  otpExpires timestamptz,
+  brand_register integer,
+  createdAt timestamptz,
+  updatedAt timestamptz
+);
+
+TABLE public.brands (
+  id integer,
+  user_id integer,
+  brand_name varchar,
+  domain jsonb,
+  region jsonb,
+  status boolean,
+  keywords json,
+  localArea boolean,
+  cities jsonb,
+  image_url varchar,
+  domain_authority jsonb,
+  refresh_token varchar,
+  ga_refresh_token varchar,
+  gbp_refresh_token varchar,
+  gsc_refresh_token varchar,
+  property_id varchar,
+  site_url varchar,
+  country varchar,
+  country_code varchar,
+  createdAt timestamptz,
+  updatedAt timestamptz
+);
+
+TABLE public.brand_gbp_data (
+  id integer,
+  brand_id integer,
+  gbp_refresh_token varchar,
+  gbp_accounts jsonb,
+  gbp_accounts_synced_at timestamptz,
+  gbp_account_name varchar,
+  gbp_location_id varchar,
+  gbp_insights jsonb,
+  gbp_insights_synced_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.domains (
+  id integer,
+  userId varchar,
+  domain varchar,
+  ga_refresh_token text,
+  gsc_refresh_token text,
+  property_id varchar,
+  createdAt timestamptz,
+  updatedAt timestamptz
+);
+
+TABLE public.webpages (
+  id integer,
+  domainId varchar,
+  date varchar,
+  url text,
+  title text,
+  meta_description text,
+  body_text text,
+  canonical text,
+  h1 jsonb,
+  h2 jsonb,
+  embedding double precision[],
+  createdAt timestamptz,
+  updatedAt timestamptz,
+  user_id bigint
+);
+
+TABLE public.urls (
+  id integer,
+  domainId varchar,
+  url text,
+  user_id bigint
+);
+
+=========================
+GOOGLE ANALYTICS (GA)
+=========================
+
+TABLE public.ga_overall_data (
+  id bigint,
+  user_id bigint,
+  brand_id bigint,
+  start_date date,
+  end_date date,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_summary (
+  id bigint,
+  ga_overall_id bigint,
+  total_users integer,
+  sessions integer,
+  screen_page_views integer,
+  bounce_rate double precision,
+  average_session_duration double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_channels (
+  id bigint,
+  ga_overall_id bigint,
+  session_default_channel_group varchar,
+  total_users integer,
+  sessions integer,
+  average_session_duration double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_devices (
+  id bigint,
+  ga_overall_id bigint,
+  device_category varchar,
+  sessions integer,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_top_pages (
+  id bigint,
+  ga_overall_id bigint,
+  page_path text,
+  screen_page_views integer,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_top_countries (
+  id bigint,
+  ga_overall_id bigint,
+  keys varchar,
+  sessions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.ga_conversions (
+  id bigint,
+  ga_overall_id bigint,
+  transactions integer,
+  total_revenue double precision,
+  session_conversion_rate double precision,
+  average_purchase_revenue double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+=========================
+GOOGLE SEARCH CONSOLE (GSC)
+=========================
+
+TABLE public.gsc_overall_data (
+  id bigint,
+  user_id bigint,
+  brand_id bigint,
+  start_date date,
+  end_date date,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.gsc_summary (
+  id bigint,
+  gsc_overall_id bigint,
+  summary_name varchar,
+  clicks integer,
+  impressions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.gsc_devices (
+  id bigint,
+  gsc_overall_id bigint,
+  keys varchar,
+  clicks integer,
+  impressions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.gsc_top_pages (
+  id bigint,
+  gsc_overall_id bigint,
+  keys text,
+  clicks integer,
+  impressions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.gsc_top_keywords (
+  id bigint,
+  gsc_overall_id bigint,
+  keys text,
+  clicks integer,
+  impressions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
+
+TABLE public.gsc_top_countries (
+  id bigint,
+  gsc_overall_id bigint,
+  keys varchar,
+  clicks integer,
+  impressions integer,
+  ctr double precision,
+  position double precision,
+  created_at timestamptz,
+  updated_at timestamptz
+);
 `;
-    const content = `
-                      ${systemPrompt}
+    console.log("✅ STEP 2 COMPLETE");
 
-                      JSON_DATA:
-                      ${JSON.stringify(analyticsData.gsc, null, 2)}
+    /* ======================= */
+    console.log("🧠 STEP 3: SQL GENERATION");
+    /* ======================= */
 
-                      QUESTION:
-                      ${message}
-                      `;
-    /* =======================
-                            📝 SAVE USER QUESTION
-                          ======================= */
-    const row = await ChatHistory.create({
+    let rawSQL;
+    let rows;
+
+    rawSQL = await generateSQL({
+      schema,
+      question,
+      user_id,
+      openaiClient,
+    });
+
+    /* ======================= */
+    console.log("🗄 STEP 4: EXECUTING SQL QUERY");
+    /* ======================= */
+
+    try {
+      rows = await sequelize.query(
+        rawSQL.replace(/{{USER_ID}}/g, String(user_id)),
+        { type: sequelize.QueryTypes.SELECT },
+      );
+
+      console.log("✅ STEP 4 COMPLETE: SQL EXECUTED SUCCESSFULLY");
+    } catch (err1) {
+      console.log("⚠️ STEP 4 FAILED → MOVING TO REPAIR");
+
+      rawSQL = await generateSQL({
+        schema,
+        question,
+        user_id,
+        previousSQL: rawSQL,
+        error: err1.message,
+        openaiClient,
+      });
+
+      rows = await sequelize.query(
+        rawSQL.replace(/{{USER_ID}}/g, String(user_id)),
+        { type: sequelize.QueryTypes.SELECT },
+      );
+
+      console.log("✅ STEP 5 COMPLETE: SQL REPAIRED & EXECUTED");
+    }
+
+    /* ======================= */
+    console.log("🧾 STEP 6: FORMATTING RESPONSE");
+    /* ======================= */
+
+    let answer = "No data found";
+
+    if (rows && rows.length) {
+      const finalPrompt = `
+Convert data into numbered list.
+FIRST field is title.
+No JSON.
+`;
+
+      const finalResp = await openaiClient.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        temperature: 0,
+        messages: [
+          { role: "system", content: finalPrompt + JSON.stringify(rows) },
+        ],
+      });
+
+      answer = finalResp.choices?.[0]?.message?.content?.trim();
+    }
+
+    console.log("✅ STEP 6 COMPLETE");
+
+    /* ======================= */
+    console.log("💾 STEP 7: SAVING CHAT HISTORY");
+    /* ======================= */
+
+    await ChatHistory.create({
       user_id,
       chat_id: chatId,
-      thread_id: THREAD_ID,
-      question: message,
+      question,
+      answer,
+      is_deleted: false,
     });
 
-    /* =======================
-                            📤 SEND TO OPENAI
-                          ======================= */
-    await openaiClient.beta.threads.messages.create(THREAD_ID, {
-      role: "user",
-      content,
-    });
+    console.log("🎉 STEP 7 COMPLETE: RESPONSE SENT");
 
-    const run = await openaiClient.beta.threads.runs.createAndPoll(THREAD_ID, {
-      assistant_id: GLOBAL_ASSISTANT_ID,
-    });
-
-    if (run.status !== "completed") {
-      throw new Error(`Run failed: ${run.status}`);
-    }
-
-    const messages = await openaiClient.beta.threads.messages.list(THREAD_ID);
-    const reply =
-      messages.data?.[0]?.content?.[0]?.text?.value ?? "No response generated";
-
-    await row.update({ answer: reply });
-
-    /* =======================
-                            ✅ FINAL RESPONSE
-                          ======================= */
     return res.json({
       success: true,
       chat_id: chatId,
-      reply,
+      reply: answer,
     });
-  } catch (error) {
-    console.error("ERROR", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+  } catch (err) {
+    console.error("🔥 CHATBOT ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
-// exports.getChatbotAnalyticsContext = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//       attributes: ["id", "domain"],
-//     });
 
-//     if (!brand) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not found",
-//       });
-//     }
-
-//     /* ===============================
-//        📊 GSC — ALL TIME (JSONB)
-//     =============================== */
-//     const [gscKPIs] = await sequelize.query(
-//       `
-//       SELECT
-//         SUM((gsc_data->'summary'->'web'->>'clicks')::numeric) AS clicks,
-//         SUM((gsc_data->'summary'->'web'->>'impressions')::numeric) AS impressions,
-//         AVG((gsc_data->'summary'->'web'->>'ctr')::numeric) AS ctr,
-//         AVG((gsc_data->'summary'->'web'->>'position')::numeric) AS position
-//       FROM gsc_snapshots
-//       WHERE brand_id = :brandId
-//       `,
-//       {
-//         replacements: { brandId: brand.id },
-//         type: sequelize.QueryTypes.SELECT,
-//       }
-//     );
-
-//     /* ===============================
-//        📈 GA — ALL TIME (JSONB)
-//     =============================== */
-//     const [gaKPIs] = await sequelize.query(
-//       `
-//       SELECT
-//         SUM((ga_data->'summary'->>'sessions')::numeric) AS sessions,
-//         SUM((ga_data->'summary'->>'users')::numeric) AS users,
-//         SUM((ga_data->'summary'->>'pageViews')::numeric) AS pageViews,
-//         AVG((ga_data->'summary'->>'bounceRate')::numeric) AS bounceRate,
-//         AVG((ga_data->'summary'->>'avgSessionDuration')::numeric) AS avgSessionDuration
-//       FROM ga_snapshots
-//       WHERE brand_id = :brandId
-//       `,
-//       {
-//         replacements: { brandId: brand.id },
-//         type: sequelize.QueryTypes.SELECT,
-//       }
-//     );
-
-//     /* ===============================
-//        🧾 LATEST SNAPSHOT (ARRAY DATA)
-//     =============================== */
-//     const latestGSC = await GscSnapshot.findOne({
-//       where: { brand_id: brand.id },
-//       order: [["end_date", "DESC"]],
-//       attributes: ["gsc_data"],
-//       raw: true,
-//     });
-
-//     const latestGA = await GaSnapshot.findOne({
-//       where: { brand_id: brand.id },
-//       order: [["end_date", "DESC"]],
-//       attributes: ["ga_data"],
-//       raw: true,
-//     });
-
-//     /* ===============================
-//        ✅ FINAL CHATBOT CONTEXT
-//     =============================== */
-//     return res.json({
-//       success: true,
-//       data: {
-//         gsc: {
-//           kpis: gscKPIs,
-//           topPages: latestGSC?.gsc_data?.topPages || [],
-//           topKeywords: latestGSC?.gsc_data?.topKeywords || [],
-//           devices: latestGSC?.gsc_data?.devices || [],
-//           countries: latestGSC?.gsc_data?.topCountries || [],
-//         },
-//         ga: {
-//           kpis: gaKPIs,
-//           topPages: latestGA?.ga_data?.topPages || [],
-//           channels: latestGA?.ga_data?.channels || [],
-//           devices: latestGA?.ga_data?.devices || [],
-//           countries: latestGA?.ga_data?.topCountries || [],
-//         },
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Chatbot analytics error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to build chatbot analytics context",
-//     });
-//   }
-// };
-
-// with prompt + sending overall dat aof gsc ,ga n web with each msg
-// exports.chatbotdata = async (req, res) => {
-//   try {
-//     const { message, chat_id, overalldata } = req.body;
-
-//     /* =======================
-//        ✅ BASIC VALIDATION
-//     ======================= */
-//     if (!message || typeof message !== "string") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Message required",
-//       });
-//     }
-
-//     const user_id = req.user.id;
-//     const chatId = chat_id || crypto.randomUUID();
-
-//     /* =======================
-//        🔎 GET DOMAIN FROM BRAND
-//     ======================= */
-//     const brand = await Brand.findOne({
-//       where: { user_id },
-//       attributes: ["domain"],
-//     });
-
-//     if (!brand) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not found for user",
-//       });
-//     }
-
-//     const siteName = brand.domain;
-
-//     /* =======================
-//        💬 THREAD LOGIC (KEEP THIS)
-//     ======================= */
-//     const previousCount = await ChatHistory.count({
-//       where: { chat_id: chatId, user_id },
-//     });
-
-//     let THREAD_ID;
-
-//     if (previousCount === 0) {
-//       const thread = await openaiClient.beta.threads.create();
-//       THREAD_ID = thread.id;
-//     } else {
-//       const lastRow = await ChatHistory.findOne({
-//         where: { chat_id: chatId, user_id },
-//         order: [["createdAt", "DESC"]],
-//       });
-//       THREAD_ID = lastRow.thread_id;
-//     }
-
-//     /* =======================
-//        🧠 SYSTEM PROMPT (ALWAYS)
-//     ======================= */
-//     const systemPrompt = `
-// You are an AI assistant for the website: ${siteName}.
-
-// RULES:
-// 1. Answer ONLY using the information provided in DATA.
-// 2. Do NOT use general knowledge or assumptions.
-// 3. Summarize information clearly if multiple pages are relevant.
-// 4. If medicines are mentioned:
-//    - Do NOT diagnose
-//    - Advise consulting a doctor if symptoms persist
-// 5. Include URLs when helpful.
-// 6. Be concise, clear, and user-friendly.
-// `;
-
-//     /* =======================
-//        🧾 BUILD MESSAGE CONTENT
-//        (NO FIRST-MESSAGE LOGIC)
-//     ======================= */
-//     const content = `
-// ${systemPrompt}
-
-// DATA:
-// ${JSON.stringify(overalldata || [], null, 2)}
-
-// User message:
-// ${message}
-// `;
-
-//     /* =======================
-//        📝 SAVE USER QUESTION
-//     ======================= */
-//     const row = await ChatHistory.create({
-//       user_id,
-//       chat_id: chatId,
-//       thread_id: THREAD_ID,
-//       question: message,
-//     });
-
-//     /* =======================
-//        📤 SEND TO OPENAI
-//     ======================= */
-//     await openaiClient.beta.threads.messages.create(THREAD_ID, {
-//       role: "user",
-//       content,
-//     });
-
-//     const run = await openaiClient.beta.threads.runs.createAndPoll(THREAD_ID, {
-//       assistant_id: GLOBAL_ASSISTANT_ID,
-//     });
-
-//     if (run.status !== "completed") {
-//       throw new Error(`Run failed: ${run.status}`);
-//     }
-
-//     const messages = await openaiClient.beta.threads.messages.list(THREAD_ID);
-//     const reply =
-//       messages.data?.[0]?.content?.[0]?.text?.value ??
-//       "No response generated";
-
-//     await row.update({ answer: reply });
-
-//     /* =======================
-//        ✅ FINAL RESPONSE
-//     ======================= */
-//     return res.json({
-//       success: true,
-//       chat_id: chatId,
-//       reply,
-//     });
-//   } catch (error) {
-//     console.error("❌ CHATBOT ERROR:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-//without propt to responce
-// exports.chatbotdata = async (req, res) => {
-//   try {
-//     const { message, chat_id, gsc_data } = req.body;
-
-//     if (!message || typeof message !== "string") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Message required",
-//       });
-//     }
-
-//     const user_id = req.user.id;
-//     const chatId = chat_id || crypto.randomUUID();
-
-//     const previousCount = await ChatHistory.count({
-//       where: { chat_id: chatId, user_id },
-//     });
-
-//     const isFirstMessage = previousCount === 0;
-
-//     let THREAD_ID;
-
-//     if (isFirstMessage) {
-//       const thread = await openaiClient.beta.threads.create();
-//       THREAD_ID = thread.id;
-//     } else {
-//       const lastRow = await ChatHistory.findOne({
-//         where: { chat_id: chatId, user_id },
-//         order: [["createdAt", "DESC"]],
-//       });
-//       THREAD_ID = lastRow.thread_id;
-//       console.log("REUSING THREAD:", THREAD_ID);
-//     }
-
-//     let content = message;
-
-//     if (isFirstMessage && Array.isArray(gsc_data) && gsc_data.length > 0) {
-//       content = `User data (remember and use these throughout this conversation):
-// ${gsc_data.join(", ")}
-
-// User message:
-// ${message}`;
-//     }
-
-//     const row = await ChatHistory.create({
-//       user_id,
-//       chat_id: chatId,
-//       thread_id: THREAD_ID,
-//       question: message,
-//     });
-
-//     await openaiClient.beta.threads.messages.create(THREAD_ID, {
-//       role: "user",
-//       content,
-//     });
-
-//     const run = await openaiClient.beta.threads.runs.createAndPoll(THREAD_ID, {
-//       assistant_id: GLOBAL_ASSISTANT_ID,
-//     });
-
-//     if (run.status !== "completed") {
-//       throw new Error(`Run failed: ${run.status}`);
-//     }
-
-//     const messages = await openaiClient.beta.threads.messages.list(THREAD_ID);
-//     const reply =
-//       messages.data?.[0]?.content?.[0]?.text?.value ?? "No response generated";
-
-//     await row.update({ answer: reply });
-
-//     return res.json({
-//       success: true,
-//       chat_id: chatId,
-//       reply,
-//     });
-//   } catch (error) {
-//     console.error("ERROR", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
 exports.getChatHistory = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { chat_id } = req.query;
+
+    if (!chat_id) {
+      return res.status(400).json({
+        success: false,
+        message: "chat_id is required",
+      });
+    }
 
     const chats = await ChatHistory.findAll({
       where: {
         user_id: userId,
+        chat_id: chat_id,
         is_deleted: false,
       },
-      attributes: [
-        "chat_id",
-        "user_id",
-        "question",
-        "answer",
-        "is_deleted",
-        "createdAt",
-      ],
+      attributes: ["id", "chat_id", "question", "answer", "createdAt"],
       order: [["createdAt", "ASC"]],
     });
 
@@ -1712,6 +2010,7 @@ exports.getChatHistory = async (req, res) => {
     });
   }
 };
+
 exports.deleteChat = async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -1802,12 +2101,9 @@ exports.collectAndStoreGAData = async (req, res) => {
     });
   }
 };
-//date_wise
+
 exports.getGSCGaWebDataFromDB = async (req, res) => {
   try {
-    /* =======================
-       🔐 BRAND CHECK
-    ======================= */
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
     });
@@ -1819,39 +2115,90 @@ exports.getGSCGaWebDataFromDB = async (req, res) => {
       });
     }
 
-    /* =======================
-       📊 GSC DATA (ARRAY)
-    ======================= */
-    const gscSnapshots = await GscSnapshot.findAll({
+    const gscOverall = await GscOverallData.findAll({
       where: { brand_id: brand.id },
       order: [["start_date", "ASC"]],
+      include: [
+        {
+          model: GscSummary,
+          as: "summaries",
+        },
+        {
+          model: GscTopKeywords,
+          as: "top_keywords",
+        },
+        {
+          model: GscTopPages,
+          as: "top_pages",
+        },
+        {
+          model: GscDevices,
+          as: "devices",
+        },
+        {
+          model: GscTopCountries,
+          as: "top_countries",
+        },
+      ],
     });
 
-    const gscData = gscSnapshots.length
-      ? gscSnapshots.flatMap((row) => row.gsc_data)
-      : [];
+    const gscData = gscOverall.map((row) => ({
+      startDate: row.start_date,
+      endDate: row.end_date,
+      summaries: row.summaries || [],
+      topKeywords: row.top_keywords || [],
+      topPages: row.top_pages || [],
+      devices: row.devices || [],
+      topCountries: row.top_countries || [],
+    }));
 
-    /* =======================
-       📈 GA DATA (ARRAY)
-    ======================= */
-    const gaSnapshots = await GaSnapshot.findAll({
+    const gaOverall = await GaOverallData.findAll({
       where: { brand_id: brand.id },
       order: [["start_date", "ASC"]],
+      include: [
+        {
+          model: GaSummary,
+          as: "summary",
+        },
+        {
+          model: GaChannels,
+          as: "channels",
+        },
+        {
+          model: GaTopPages,
+          as: "top_pages",
+        },
+        {
+          model: GaDevices,
+          as: "devices",
+        },
+        {
+          model: GaTopCountries,
+          as: "top_countries",
+        },
+        {
+          model: GaConversions,
+          as: "conversions",
+        },
+      ],
     });
 
-    const gaData = gaSnapshots.length
-      ? gaSnapshots.flatMap((row) => row.ga_data)
-      : [];
+    const gaData = gaOverall.map((row) => ({
+      startDate: row.start_date,
+      endDate: row.end_date,
+      summary: row.summary || null,
+      channels: row.channels || [],
+      topPages: row.top_pages || [],
+      devices: row.devices || [],
+      topCountries: row.top_countries || [],
+      conversions: row.conversions || null,
+    }));
 
-    /* =======================
-       🌐 WEBPAGES DATA (ARRAY)
-    ======================= */
     const webpages = await Webpage.findAll({
       where: {
         user_id: req.user.id,
         domainId: String(brand.id),
       },
-
       attributes: [
         "date",
         "url",
@@ -1861,53 +2208,44 @@ exports.getGSCGaWebDataFromDB = async (req, res) => {
         "canonical",
         "h1",
         "h2",
-        "domainId",
       ],
       order: [["date", "ASC"]],
     });
 
-    const webpagesData = webpages.length
-      ? webpages.map((page) => ({
-          date: page.date,
-          url: page.url,
-          title: page.title,
-          meta_description: page.meta_description,
-          body_text: page.body_text,
-          canonical: page.canonical,
-          h1: page.h1,
-          h2: page.h2,
-        }))
-      : [];
+    const webpagesData = webpages.map((page) => ({
+      date: page.date,
+      url: page.url,
+      title: page.title,
+      meta_description: page.meta_description,
+      body_text: page.body_text,
+      canonical: page.canonical,
+      h1: page.h1,
+      h2: page.h2,
+    }));
 
-    /* =======================
-       ❌ NO DATA FOUND
-    ======================= */
     if (!gscData.length && !gaData.length && !webpagesData.length) {
       return res.status(200).json({
         success: true,
+        message: "No GA, GSC, or Webpages data found in DB",
         data: {
           gsc: [],
           ga: [],
           webpages: [],
         },
-        message: "No GA, GSC, or Webpages data found in DB",
       });
     }
 
-    /* =======================
-       ✅ FINAL RESPONSE
-    ======================= */
     return res.status(200).json({
       success: true,
-      message: "hey",
+      message: "Analytics data fetched successfully",
       data: {
-        gsc: gscData, // ✅ ARRAY
-        ga: gaData, // ✅ ARRAY
-        webpages: webpagesData, // ✅ ARRAY
+        gsc: gscData,
+        ga: gaData,
+        webpages: webpagesData,
       },
     });
   } catch (error) {
-    console.error("getAnalyticsDataFromDB error:", error);
+    console.error("getGSCGaWebDataFromDB error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch analytics data from DB",
@@ -1915,550 +2253,6 @@ exports.getGSCGaWebDataFromDB = async (req, res) => {
   }
 };
 
-// exports.getGSCDataFromDB = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-
-//     // ✅ Fetch all brands belonging to logged-in user
-//     const brands = await Brand.findAll({
-//       where: { user_id: userId },
-//       attributes: ["id"],
-//     });
-
-//     if (!brands.length) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "No brand found for this user",
-//       });
-//     }
-
-//     const brandIds = brands.map((b) => b.id);
-
-//     // ✅ Fetch snapshots ONLY for these brand IDs
-//     const snapshots = await GscSnapshot.findAll({
-//       where: {
-//         brand_id: brandIds,
-//       },
-//       order: [["start_date", "ASC"]],
-//     });
-
-//     if (!snapshots.length) {
-//       return res.status(200).json({
-//         success: true,
-//         data: [],
-//         message: "No GSC data found for this user",
-//       });
-//     }
-
-//     // ✅ Flatten safely
-//     const gscData = snapshots.flatMap((row) => row.gsc_data || []);
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "GSC data fetched for logged-in user",
-//       data: gscData,
-//     });
-//   } catch (error) {
-//     console.error("getGSCDataFromDB error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GSC data",
-//     });
-//   }
-// };
-
-//overall(total) data calculate
-// exports.getGSCDataFromDB = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not found",
-//       });
-//     }
-
-//     const snapshots = await GscSnapshot.findAll({
-//       where: { brand_id: brand.id },
-//       order: [["start_date", "ASC"]],
-//     });
-
-//     if (!snapshots.length) {
-//       return res.status(200).json({
-//         success: true,
-//         data: {},
-//         message: "No GSC data found in DB",
-//       });
-//     }
-
-//     const merged = {
-//       summary: {
-//         web: { clicks: 0, impressions: 0 },
-//         discover: { clicks: 0, impressions: 0 },
-//         news: { clicks: 0, impressions: 0 },
-//       },
-//       topKeywords: [],
-//       topCountries: [],
-//       topPages: [],
-//       devices: [],
-//     };
-
-//     snapshots.forEach((row) => {
-//       const d = row.gsc_data;
-
-//       // SUMMARY
-//       if (d?.summary?.web) {
-//         merged.summary.web.clicks += d.summary.web.clicks || 0;
-//         merged.summary.web.impressions += d.summary.web.impressions || 0;
-//       }
-
-//       // TOP KEYWORDS
-//       merged.topKeywords.push(...(d.topKeywords || []));
-
-//       // TOP COUNTRIES
-//       merged.topCountries.push(...(d.topCountries || []));
-
-//       // TOP PAGES
-//       merged.topPages.push(...(d.topPages || []));
-
-//       // DEVICES
-//       merged.devices.push(...(d.devices || []));
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Merged GSC data fetched from DB",
-//       data: merged,
-//     });
-//   } catch (error) {
-//     console.error("getGSCDataFromDB error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GSC data from DB",
-//     });
-//   }
-// };
-// exports.getGoogleBusinessProfileData = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand?.gbp_refresh_token) {
-//       return res.json({
-//         success: true,
-//         message: "Google Business Profile not connected",
-//         data: {},
-//       });
-//     }
-
-//     const now = new Date();
-//     const lastSync = brand.gbp_last_synced
-//       ? new Date(brand.gbp_last_synced)
-//       : null;
-
-//     const diffMinutes = lastSync
-//       ? (now - lastSync) / (1000 * 60)
-//       : Infinity;
-
-//     // ✅ RETURN CACHED DATA IF RECENT
-//     if (diffMinutes < 15 && brand.gbp_data) {
-//       return res.json({
-//         success: true,
-//         source: "cache",
-//         data: brand.gbp_data,
-//       });
-//     }
-
-//     // 🔐 Refresh token (ONLY NOW)
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gbp_refresh_token
-//     );
-
-//     /* ---------- 1️⃣ Accounts ---------- */
-//     const accountsRes = await axios.get(
-//       "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
-//       { headers: { Authorization: `Bearer ${access_token}` } }
-//     );
-
-//     const accountName = accountsRes.data.accounts?.[0]?.name;
-//     if (!accountName) {
-//       return res.json({ success: true, data: {} });
-//     }
-
-//     /* ---------- 2️⃣ Locations ---------- */
-//     const locationsRes = await axios.get(
-//       `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`,
-//       { headers: { Authorization: `Bearer ${access_token}` } }
-//     );
-
-//     const locationName = locationsRes.data.locations?.[0]?.name;
-
-//     /* ---------- 3️⃣ Reviews ---------- */
-//     let reviews = [];
-//     if (locationName) {
-//       const reviewsRes = await axios.get(
-//         `https://mybusiness.googleapis.com/v4/${locationName}/reviews`,
-//         { headers: { Authorization: `Bearer ${access_token}` } }
-//       );
-//       reviews = reviewsRes.data.reviews || [];
-//     }
-
-//     const gbpData = {
-//       account: accountName,
-//       location: locationName,
-//       reviews,
-//       syncedAt: now,
-//     };
-
-//     // 💾 SAVE CACHE
-//     await brand.update({
-//       gbp_data: gbpData,
-//       gbp_last_synced: now,
-//     });
-
-//     return res.json({
-//       success: true,
-//       source: "google",
-//       data: gbpData,
-//     });
-//   } catch (error) {
-//     if (error.response?.status === 429) {
-//       return res.status(429).json({
-//         success: false,
-//         message:
-//           "Google Business Profile rate limit exceeded. Please try again later.",
-//       });
-//     }
-
-//     console.error("GBP Error:", error.response?.data || error.message);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GBP data",
-//     });
-//   }
-// };
-// exports.getGBPLocations = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand?.gbp_account_name) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "GBP account not selected",
-//       });
-//     }
-
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gbp_refresh_token
-//     );
-
-//     const { data } = await axios.get(
-//       `https://mybusinessbusinessinformation.googleapis.com/v1/${brand.gbp_account_name}/locations`,
-//       {
-//         headers: { Authorization: `Bearer ${access_token}` },
-//       }
-//     );
-
-//     const location = data.locations?.[0];
-
-//     if (location) {
-//       brand.gbp_location_id = location.name; // locations/XXXX
-//       await brand.save();
-//     }
-
-//     return res.json({
-//       success: true,
-//       locations: data.locations || [],
-//     });
-//   } catch (err) {
-//     console.error("GBP Locations Error:", err.response?.data || err.message);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GBP locations",
-//     });
-//   }
-// };
-// exports.selectGBPAccount = async (req, res) => {
-//   const { account_name } = req.body;
-
-//   if (!account_name) {
-//     return res.status(400).json({
-//       success: false,
-//       message: "account_name is required",
-//     });
-//   }
-
-//   const brand = await Brand.findOne({
-//     where: { user_id: req.user.id },
-//   });
-
-//   brand.gbp_account_name = account_name;
-//   await brand.save();
-
-//   return res.json({
-//     success: true,
-//     message: "GBP account selected",
-//   });
-// };
-// exports.getGBPInsights = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand?.gbp_location_id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "GBP location not selected",
-//       });
-//     }
-
-//     const now = new Date();
-//     const lastSync = brand.gbp_last_synced
-//       ? new Date(brand.gbp_last_synced)
-//       : null;
-
-//     // ✅ CACHE FOR 24 HOURS (FIXES 429)
-//     if (
-//       lastSync &&
-//       (now - lastSync) / (1000 * 60) < 1440 &&
-//       brand.gbp_data
-//     ) {
-//       return res.json({
-//         success: true,
-//         source: "cache",
-//         data: brand.gbp_data,
-//       });
-//     }
-
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gbp_refresh_token
-//     );
-
-//     const body = {
-//       dailyMetrics: [
-//         "WEBSITE_CLICKS",
-//         "CALL_CLICKS",
-//         "DIRECTIONS_REQUESTS",
-//         "BUSINESS_IMPRESSIONS",
-//       ],
-//       dateRange: {
-//         startDate: { year: 2024, month: 1, day: 1 },
-//         endDate: { year: 2024, month: 1, day: 31 },
-//       },
-//     };
-
-//     const { data } = await axios.post(
-//       `https://businessprofileperformance.googleapis.com/v1/${brand.gbp_location_id}:fetchMultiDailyMetricsTimeSeries`,
-//       body,
-//       {
-//         headers: { Authorization: `Bearer ${access_token}` },
-//       }
-//     );
-
-//     await brand.update({
-//       gbp_data: data,
-//       gbp_last_synced: now,
-//     });
-
-//     return res.json({
-//       success: true,
-//       source: "google",
-//       data,
-//     });
-//   } catch (err) {
-//     if (err.response?.status === 429) {
-//       return res.status(429).json({
-//         success: false,
-//         message: "GBP quota exceeded. Try again later.",
-//       });
-//     }
-
-//     console.error("GBP Insights Error:", err.response?.data || err.message);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GBP insights",
-//     });
-//   }
-// };
-// exports.getGBPReviews = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand?.gbp_location_id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "GBP location not selected",
-//       });
-//     }
-
-//     const { access_token } = await refreshGoogleAccessToken(
-//       brand.gbp_refresh_token
-//     );
-
-//     const { data } = await axios.get(
-//       `https://mybusiness.googleapis.com/v4/${brand.gbp_location_id}/reviews`,
-//       {
-//         headers: { Authorization: `Bearer ${access_token}` },
-//       }
-//     );
-
-//     return res.json({
-//       success: true,
-//       reviews: data.reviews || [],
-//     });
-//   } catch (err) {
-//     console.error("GBP Reviews Error:", err.response?.data || err.message);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GBP reviews",
-//     });
-//   }
-// };
-// exports.startGBPOAuth = async (req, res) => {
-//   try {
-//     console.log("GBP OAUTH ENV CHECK:", {
-//       CLIENT_ID: process.env.CLIENT_ID ,
-//       CLIENT_SECRET: process.env.CLIENT_SECRET ,
-//       GBP_REDIRECT_URI: process.env.GBP_REDIRECT_URI,
-//     });
-
-//     const oauth2Client = new OAuth2Client(
-//       process.env.CLIENT_ID,
-//       process.env.CLIENT_SECRET,
-//       process.env.GBP_REDIRECT_URI
-//     );
-
-//     const authUrl = oauth2Client.generateAuthUrl({
-//       access_type: "offline",
-//       prompt: "consent",
-//       scope: ["https://www.googleapis.com/auth/business.manage"],
-//     });
-
-//     return res.redirect(authUrl);
-//   } catch (err) {
-//     console.error("startGBPOAuth ERROR:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to start GBP OAuth",
-//     });
-//   }
-// };
-// exports.getGBPAccounts = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand || !brand.gbp_refresh_token) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "GBP not connected",
-//       });
-//     }
-
-//     // ✅ FIND OR CREATE BRAND GBP DATA ROW
-//     const [gbpData] = await BrandGbpData.findOrCreate({
-//       where: { brand_id: brand.id },
-//       defaults: {
-//         gbp_refresh_token: brand.gbp_refresh_token,
-//       },
-//     });
-
-//     // ✅ 1️⃣ RETURN FROM DB IF EXISTS
-//     if (gbpData.gbp_accounts && gbpData.gbp_accounts_synced_at) {
-//       return res.json({
-//         success: true,
-//         source: "db",
-//         accounts: gbpData.gbp_accounts,
-//       });
-//     }
-
-//     // ✅ 2️⃣ GET ACCESS TOKEN
-//     const accessToken = await refreshGoogleAccessToken(
-//       brand.gbp_refresh_token
-//     );
-
-//     // 🚫 NO RETRIES
-//     const response = await axios.get(
-//       "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
-//       {
-//         headers: {
-//           Authorization: `Bearer ${accessToken}`,
-//         },
-//         timeout: 10000,
-//       }
-//     );
-
-//     const accounts = response.data.accounts || [];
-
-//     // ✅ 3️⃣ SAVE TO DB (THIS WAS MISSING)
-//     await gbpData.update({
-//       gbp_accounts: accounts,
-//       gbp_accounts_synced_at: new Date(),
-//     });
-
-//     return res.json({
-//       success: true,
-//       source: "google",
-//       accounts,
-//     });
-
-//   } catch (err) {
-//     if (err.response?.status === 429) {
-//       return res.status(429).json({
-//         success: false,
-//         message: "GBP quota hit. Wait 5 minutes. Do NOT retry.",
-//       });
-//     }
-
-//     console.error("GBP ACCOUNTS ERROR:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch GBP accounts",
-//     });
-//   }
-// };
-
-// exports.startGBPOAuth = async (req, res) => {
-//   try {
-//     const brand = await Brand.findOne({
-//       where: { user_id: req.user.id },
-//     });
-
-//     if (!brand) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Brand not found for user",
-//       });
-//     }
-
-//     const authUrl = oauth2Client.generateAuthUrl({
-//       access_type: "offline",
-//       prompt: "consent", // 🔴 REQUIRED
-//       scope: ["https://www.googleapis.com/auth/business.manage"],
-//       state: JSON.stringify({
-//         brandId: brand.id, // ✅ THIS IS CRITICAL
-//       }),
-//     });
-
-//     return res.redirect(authUrl);
-//   } catch (err) {
-//     console.error("startGBPOAuth error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to start GBP OAuth",
-//     });
-//   }
-// };
 // controllers/googleController.js
 exports.startGBPOAuth = async (req, res) => {
   try {
@@ -2519,9 +2313,6 @@ exports.getGBPAccounts = async (req, res) => {
   let gbp;
 
   try {
-    /* ===========================
-       1️⃣ FETCH BRAND
-    =========================== */
     const brand = await Brand.findOne({
       where: { user_id: req.user.id },
     });
@@ -2712,7 +2503,6 @@ exports.refreshGBPInsights = async (req, res) => {
       .json({ success: false, message: "Location not selected" });
   }
 
-  // ⛔ Allow refresh only once per 24 hours
   if (
     gbp.gbp_insights_synced_at &&
     Date.now() - gbp.gbp_insights_synced_at.getTime() < 24 * 60 * 60 * 1000
@@ -2754,7 +2544,6 @@ exports.refreshGBPInsights = async (req, res) => {
   res.json({ success: true, source: "google", data });
 };
 
-//limit excied mail
 const transporterr = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
@@ -2805,9 +2594,7 @@ exports.gemailtrigger = async (req, res) => {
     });
   }
 };
-
 //n8n aksy enail
-
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
@@ -3039,175 +2826,3 @@ exports.gemailtriggervisibility = async (req, res) => {
     });
   }
 };
-
-// exports.gemailtriggervisibility = async (req, res) => {
-//   try {
-//     // 🔐 user id from JWT
-//     const userId = req.user?.id;
-
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: user id missing",
-//       });
-//     }
-
-//     const today = new Date().toISOString().slice(0, 10);
-//     const yesterday = new Date(Date.now() - 86400000)
-//       .toISOString()
-//       .slice(0, 10);
-
-//     /* =========================
-//        1️⃣ FETCH DATA USING SEQUELIZE
-//     ========================= */
-//     const prompts = await Prompt.findAll({
-//       where: {
-//         userId: userId,
-//         [Op.or]: [
-//           { is_deleted: false },
-//           { is_deleted: null },
-//         ],
-//       },
-//       attributes: ["id", "title"],
-//       include: [
-//         {
-//           model: User,
-//            as: "user",
-//           attributes: ["username", "email"],
-//         },
-//         {
-//           model: Brand,
-//           where: { status: true },
-//           attributes: ["brand_name"],
-//         },
-//         {
-//           model: VisibilityLog,
-//           required: false,
-//           attributes: [
-//             "platform",
-//             "mentioned",
-//             "mentions",
-//             "visibility_score",
-//             "run_date",
-//           ],
-//           where: {
-//             run_date: {
-//               [Op.between]: [
-//                 new Date(`${yesterday}T00:00:00`),
-//                 new Date(`${today}T23:59:59`),
-//               ],
-//             },
-//           },
-//         },
-//       ],
-//       order: [["id", "ASC"]],
-//     });
-
-//     if (!prompts || prompts.length === 0) {
-//       return res.json({
-//         success: true,
-//         message: "No visibility data found",
-//       });
-//     }
-
-//     /* =========================
-//        2️⃣ GROUP + DETECT DROPS
-//     ========================= */
-//     const map = {};
-
-//     for (const p of prompts) {
-//       for (const v of p.VisibilityLogs || []) {
-//         const runDay = v.run_date.toISOString().slice(0, 10);
-//         const key = `${p.id}|${v.platform}`;
-
-//         if (!map[key]) {
-//           map[key] = {
-//             email: p.User.email,
-//             username: p.User.username,
-//             brand: p.Brand.brand_name,
-//             prompt_title: p.title,
-//             platform: v.platform,
-//             today: null,
-//             yesterday: null,
-//           };
-//         }
-
-//         if (runDay === today) {
-//           map[key].today = v.mentioned;
-//         } else if (runDay === yesterday) {
-//           map[key].yesterday = v.mentioned;
-//         }
-//       }
-//     }
-
-//     const drops = Object.values(map).filter(
-//       r => r.yesterday === true && r.today === false
-//     );
-
-//     if (drops.length === 0) {
-//       return res.json({
-//         success: true,
-//         message: "No visibility drops detected",
-//       });
-//     }
-
-//     /* =========================
-//        3️⃣ BUILD EMAIL
-//     ========================= */
-//     const brandName = drops[0].brand || "-";
-//     const toEmail = drops[0].email;
-
-//     const blocks = drops.map(d => `
-//       <div style="margin-bottom:16px; padding:12px; border-left:4px solid #dc2626; background:#fef2f2;">
-//         <p><b>Prompt:</b> ${d.prompt_title}</p>
-//         <p><b>Platform:</b> ${d.platform}</p>
-//         <p style="color:#dc2626;">
-//           <b>Status:</b> ❌ Mention DROPPED (Yesterday → Today)
-//         </p>
-//       </div>
-//     `).join("");
-
-//     const html = `
-//       <p>Hi ${drops[0].username || ""},</p>
-
-//       <p>
-//         ⚠️ <b>Brand Visibility Alert</b><br/>
-//         The following mentions have <b>dropped today</b>.
-//       </p>
-
-//       <p><b>Brand:</b> ${brandName}</p>
-
-//       ${blocks}
-
-//       <p style="margin-top:24px;">
-//         Regards,<br/>
-//         <b>Visibility Monitoring System</b>
-//       </p>
-//     `;
-
-//     /* =========================
-//        4️⃣ SEND EMAIL
-//     ========================= */
-//     await transporter.sendMail({
-//       from: `"Visibility Alert" <${process.env.SMTP_USER}>`,
-//       to: toEmail,
-//       subject: `⚠️ Brand Visibility Drop – ${brandName}`,
-//       html,
-//     });
-
-//     return res.json({
-//       success: true,
-//       message: "Visibility drop email sent",
-//       email: toEmail,
-//       brand: brandName,
-//       drops: drops.length,
-//     });
-
-//   } catch (error) {
-//     console.error("❌ Visibility Email Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
