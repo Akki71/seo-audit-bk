@@ -179,23 +179,30 @@ console.log("access_token",access_token);
       metrics: [{ name: "sessions" }],
     });
 
-    // await GaTopCountries.bulkCreate(
-    //   countryRes.rows?.map((r) => ({
-    //     ga_overall_id: gaOverallId,
-    //     key: r.value,
-    //     // sessions: +r.metricValues?.[0]?.value || 0,
-    //   })) || [],
-    // );
-await GaTopCountries.bulkCreate(
-  (countryRes.rows || []).map((r) => ({
-    ga_overall_id: gaOverallId,
-    keys: r.keys?.[0] || "",
-    sessions: r.clicks || 0,   // GA clicks → sessions
-    ctr: r.ctr || 0,
-    position: r.position || 0,
-  })),
-  { ignoreDuplicates: true }
-);
+  await GaTopCountries.bulkCreate(
+      (countryRes.rows || [])
+        .filter((r) => r.dimensionValues?.[0]?.value)
+        .map((r) => ({
+          ga_overall_id: gaOverallId,
+          keys: r.dimensionValues[0].value,
+          sessions: +r.metricValues?.[0]?.value || 0,
+        })),
+      { ignoreDuplicates: true }
+    );
+
+ 
+// await GaTopCountries.bulkCreate(
+//   (countryRes.rows || []).map((r) => ({
+//     ga_overall_id: gaOverallId,
+//     keys: r.keys?.[0]?.value || "",
+//         // session_default_channel_group: r.dimensionValues?.[0]?.value,
+
+//     sessions: r.clicks || 0,   // GA clicks → sessions
+//     ctr: r.ctr || 0,
+//     position: r.position || 0,
+//   })),
+//   { ignoreDuplicates: true }
+// );
 
     /* =======================
        🔟 DEVICES

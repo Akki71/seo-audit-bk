@@ -29,16 +29,6 @@ const GaTopCountries = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
-
-    ctr: {
-      type: DataTypes.DOUBLE,
-      defaultValue: 0,
-    },
-
-    position: {
-      type: DataTypes.DOUBLE,
-      defaultValue: 0,
-    },
   },
   {
     tableName: "ga_top_countries",
